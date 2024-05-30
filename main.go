@@ -16,9 +16,14 @@ type board struct {
 	players []player
 }
 
+/*
+	 Represents a game of Othello. O (white) and X (black) hold their respective
+		scores
+*/
 type game struct {
 	state board
-	score int
+	O     int
+	X     int
 }
 
 func initializePlayer(name, piece string) *player {
@@ -53,7 +58,7 @@ func initializeGame(p1, p2 player) (*game, *board) {
 	b := board{}
 	bptr := makeFreshBoard(&b)
 	b.players = append(b.players, p1, p2)
-	g := game{b, 0}
+	g := game{b, 2, 2}
 
 	return &g, bptr
 }
@@ -64,28 +69,33 @@ func printBoard(b [100]string) {
 		if i%10 == 0 {
 			fmt.Print("\n")
 		}
-		fmt.Printf("%v[%d]	", b[i], i)
+		fmt.Printf("%v	", b[i])
 	}
 	fmt.Printf("\n")
 }
 
-func currentScore(b board) (int, int) {
+/* Returns the current score of a game. Updates the game's score */
+func score(g game) (int, int) {
 	o, x := 0, 0
 	for i := 11; i < 89; i++ {
-		if b.board[i] == "O" {
+		if g.state.board[i] == "O" {
 			o += 1
+			g.O += 1
 		}
-		if b.board[i] == "X" {
+		if g.state.board[i] == "X" {
 			x += 1
+			g.X += 1
 		}
 	}
 	return o, x
 }
 
 func main() {
-	b := board{}
-	ptr := makeFreshBoard(&b)
-	printBoard(ptr.board)
-	o, x := currentScore(b)
-	fmt.Printf("White: %d Black: %d", o, x)
+
+	p1, p2 := player{"Tayler", "O"}, player{"Arbi", "X"}
+	g, bptr := initializeGame(p1, p2)
+	printBoard(bptr.board)
+	o, x := score(*g)
+	fmt.Printf("SCORE:	White: %d Black: %d\n", o, x)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
 }
