@@ -1,6 +1,8 @@
 package main
 
-import "fmt"
+import (
+	"fmt"
+)
 
 /* Represents a player in a game of Othello */
 type player struct {
@@ -29,36 +31,44 @@ func initialSquares(i int) bool {
 	return (i%10 >= 1 && i%10 <= 8)
 }
 
-func makeFreshBoard(board [100]string) [100]string {
+func makeFreshBoard(b *board) *board {
 	for i := 0; i < 100; i++ {
-		board[i] = "*"
+		b.board[i] = "*"
 	}
 	for i := 11; i < 89; i++ {
 		if initialSquares(i) {
-			board[i] = "."
+			b.board[i] = "."
 		}
 	}
 
-	board[44] = "O"
-	board[54] = "O"
-	board[45] = "X"
-	board[55] = "X"
+	b.board[44] = "O"
+	b.board[45] = "X"
+	b.board[54] = "X"
+	b.board[55] = "O"
 
-	return board
+	return b
 }
 
-func initializeGame(p1, p2 player) *game {
+func initializeGame(p1, p2 player) (*game, *board) {
 	b := board{}
+	bptr := makeFreshBoard(&b)
 	b.players = append(b.players, p1, p2)
-	b.board = makeFreshBoard(b.board)
 	g := game{b, 0}
 
-	return &g
+	return &g, bptr
+}
+
+func printBoard(b [100]string) {
+	for i := 0; i < 100; i++ {
+		if i%10 == 0 {
+			fmt.Println('\n')
+		}
+		fmt.Printf("%v	", b[i])
+	}
 }
 
 func main() {
-	fmt.Println("Hello, Bastard!")
-	b := [100]string{}
-	x := makeFreshBoard(b)
-	fmt.Printf("%v", x)
+	b := board{}
+	x := makeFreshBoard(&b)
+	printBoard(x.board)
 }
