@@ -58,13 +58,15 @@ func initializeGame(p1, p2 player) (*game, *board) {
 	return &g, bptr
 }
 
+/* Print the board to the terminal */
 func printBoard(b [100]string) {
 	for i := 0; i < 100; i++ {
 		if i%10 == 0 {
-			fmt.Println('\n')
+			fmt.Print("\n")
 		}
 		fmt.Printf("%v	", b[i])
 	}
+	fmt.Printf("\n")
 }
 
 func main() {
