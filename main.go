@@ -26,7 +26,7 @@ func initializePlayer(name, piece string) *player {
 	return &p
 }
 
-/* Gets the playable squares in an initial board */
+/* Determines if a square is playable */
 func initialSquares(i int) bool {
 	return (i%10 >= 1 && i%10 <= 8)
 }
@@ -64,13 +64,28 @@ func printBoard(b [100]string) {
 		if i%10 == 0 {
 			fmt.Print("\n")
 		}
-		fmt.Printf("%v	", b[i])
+		fmt.Printf("%v[%d]	", b[i], i)
 	}
 	fmt.Printf("\n")
 }
 
+func currentScore(b board) (int, int) {
+	o, x := 0, 0
+	for i := 11; i < 89; i++ {
+		if b.board[i] == "O" {
+			o += 1
+		}
+		if b.board[i] == "X" {
+			x += 1
+		}
+	}
+	return o, x
+}
+
 func main() {
 	b := board{}
-	x := makeFreshBoard(&b)
-	printBoard(x.board)
+	ptr := makeFreshBoard(&b)
+	printBoard(ptr.board)
+	o, x := currentScore(b)
+	fmt.Printf("White: %d Black: %d", o, x)
 }
