@@ -15,6 +15,12 @@ type board struct {
 	board      [100]string
 	players    []player
 	directions [8]int
+	turn       string
+}
+
+/* Captures board state */
+type history struct {
+	moves []board
 }
 
 /*
@@ -23,6 +29,7 @@ type board struct {
 */
 type game struct {
 	state board
+	hist  history
 	O     int
 	X     int
 }
@@ -37,7 +44,7 @@ func validSquare(i int) bool {
 	return (i%10 >= 1 && i%10 <= 8)
 }
 
-func makeFreshBoard(b *board) *board {
+func initializeBoard(b *board) *board {
 	for i := 0; i < 100; i++ {
 		b.board[i] = "*"
 	}
@@ -56,10 +63,11 @@ func makeFreshBoard(b *board) *board {
 }
 
 func initializeGame(p1, p2 player) (*game, *board) {
-	b := board{directions: [8]int{10, -10, 1, -1, 11, -11, 9, -9}}
-	bptr := makeFreshBoard(&b)
+	b := board{directions: [8]int{10, -10, 1, -1, 11, -11, 9, -9}, turn: "X"}
+	bptr := initializeBoard(&b)
 	b.players = append(b.players, p1, p2)
-	g := game{b, 2, 2}
+	history := history{}
+	g := game{b, history, 2, 2}
 
 	return &g, bptr
 }
@@ -81,13 +89,14 @@ func score(g game) (int, int) {
 	for i := 11; i < 89; i++ {
 		if g.state.board[i] == "O" {
 			o += 1
-			g.O += 1
 		}
 		if g.state.board[i] == "X" {
 			x += 1
-			g.X += 1
 		}
 	}
+	g.O = o
+	g.X = x
+
 	return o, x
 }
 
@@ -125,13 +134,128 @@ func validMove(square, direction int, g game, p player) bool {
 	return false
 }
 
-func main() {
+/* Returns a slice of all valid directions for a given move */
+func validDirections(square int, p player, g game) []int {
+	valid := make([]int, 0, 8)
+	for i := 0; i < len(g.state.directions); i++ {
+		if validMove(square, g.state.directions[i], g, p) {
+			valid = append(valid, g.state.directions[i])
+		}
+	}
+	return valid
+}
 
-	p1, p2 := initializePlayer("Tayler", "O"), initializePlayer("Arbi", "X")
-	gptr, bptr := initializeGame(*p1, *p2)
-	printBoard(bptr.board)
+func availableMoves(p player, g game) map[int]bool {
+	// dirs := make([]int, 0)
+	moves := make(map[int]bool)
+	for i := 11; i < 89; i++ {
+		if validSquare(i) {
+			check := validDirections(i, p, g)
+			if len(check) > 0 {
+				moves[i] = true
+			}
+		}
+	}
+	return moves
+}
+
+/*
+Flips the pieces in all valid directions. Records state of the board.
+Updates player turn.
+*/
+func flip(square int, p player, g *game) {
+	opp := getOpp(p.piece)
+	dirs := validDirections(square, p, *g)
+	g.state.board[square] = p.piece
+
+	for i := 0; i < len(dirs); i++ {
+		newSquare := square + dirs[i]
+		for g.state.board[newSquare] == opp {
+			g.state.board[newSquare] = p.piece
+			newSquare += dirs[i]
+		}
+	}
+	g.hist.moves = append(g.hist.moves, g.state)
+	g.state.turn = opp
+}
+
+/* Checks if a game is over */
+func gameOver(g game) bool {
+	o, x := availableMoves(g.state.players[0], g), availableMoves(g.state.players[1], g)
+	if len(o) < 1 && len(x) < 1 {
+		return true
+	}
+	return false
+}
+
+func gameType() int {
+	var input int
+	fmt.Printf("Enter 1 for 1v1, 2 to play against a bot: ")
+	fmt.Scanln(&input)
+	return input
+}
+
+func getPlayers() (*player, *player) {
+	var name, name2 string
+	fmt.Printf("Enter player 1's name. They will be the \"O\" pieces: ")
+	fmt.Scanln(&name)
+	fmt.Printf("Enter player 1's name. They will be the \"X\" pieces: ")
+	fmt.Scanln(&name2)
+	p1, p2 := initializePlayer(name, "O"), initializePlayer(name2, "X")
+	return p1, p2
+}
+
+func getPlayer(turn string, g game) player {
+	if turn == g.state.players[0].piece {
+		return g.state.players[0]
+	} else {
+		return g.state.players[1]
+	}
+}
+
+func playGame() {
+	// gameType := gameType()
+	// if gameType == 1 {
+	//	p1, p2 := getPlayers()
+	//}
+	p1, p2 := getPlayers()
+	gptr, _ := initializeGame(*p1, *p2)
+	for !gameOver(*gptr) {
+		printBoard(gptr.state.board)
+		o, x := score(*gptr)
+		curr := getPlayer(gptr.state.turn, *gptr)
+		legal := availableMoves(curr, *gptr)
+		fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+		fmt.Printf("CURRENT TURN: %v, %s\n", curr.name, gptr.state.turn)
+		fmt.Printf("SCORE:	White: %d Black: %d\n", o, x)
+		fmt.Printf("LEGAL MOVES FOR %s: %v\n", gptr.state.turn, legal)
+		var move int
+		fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.name)
+		fmt.Scanln(&move)
+		elem, ok := legal[move]
+		if !ok {
+			fmt.Printf("%v INVALID MOVE!", elem)
+		} else {
+			flip(move, curr, gptr)
+		}
+	}
 	o, x := score(*gptr)
-	fmt.Printf("SCORE:	White: %d Black: %d\n", o, x)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
-	fmt.Printf("DIRECTIONS: %v\n", bptr.directions)
+	fmt.Println("------GAME OVER!------")
+	printBoard(gptr.state.board)
+	fmt.Printf("FINAL SCORE:	O: %d	X: %d\n", o, x)
+	switch {
+	case o > x:
+		winner := getPlayer("O", *gptr)
+		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.name)
+	case o < x:
+		winner := getPlayer("X", *gptr)
+		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.name)
+	default:
+		fmt.Printf("RESULT: TIE GAME!")
+	}
+	fmt.Println("Thank you for playing Gothello!")
+}
+
+func main() {
+	playGame()
 }
