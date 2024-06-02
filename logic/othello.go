@@ -2,6 +2,8 @@ package logic
 
 import (
 	"fmt"
+
+	"github.com/gothello/bots"
 )
 
 /* Represents a Player in a Game of Othello */
@@ -129,6 +131,10 @@ func validMove(square, direction int, g Game, p Player) bool {
 			return true
 		}
 		newSquare += direction
+		// if newSquare is greater than board length. May need to revisit**
+		if newSquare > 99 {
+			return true
+		}
 	}
 
 	return false
@@ -190,7 +196,11 @@ func gameOver(g Game) bool {
 
 func gameType() int {
 	var input int
-	fmt.Printf("Enter 1 for 1v1, 2 to play against a bot: ")
+	fmt.Printf("Enter 1 for to play against a human\n")
+	fmt.Printf("Enter 2 to play against Randy, a bot that selects moves at random\n")
+	fmt.Printf("Enter 3 to play against Max, a minimax bot...\n")
+	fmt.Printf("Enter 4 for the rules of Othello\n")
+	fmt.Printf("GAME TYPE: ")
 	fmt.Scanln(&input)
 	return input
 }
@@ -213,32 +223,7 @@ func getPlayer(turn string, g Game) Player {
 	}
 }
 
-func PlayGame() {
-	// gameType := gameType()
-	// if gameType == 1 {
-	//	p1, p2 := getPlayers()
-	//}
-	p1, p2 := getPlayers()
-	gptr, _ := initializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
-	for !gameOver(*gptr) {
-		printBoard(gptr.state.board)
-		o, x := score(*gptr)
-		curr := getPlayer(gptr.state.turn, *gptr)
-		legal := availableMoves(curr, *gptr)
-		fmt.Printf("CURRENT TURN: %v, %s\n", curr.name, gptr.state.turn)
-		fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
-		fmt.Printf("LEGAL MOVES FOR %s: %v\n", gptr.state.turn, legal)
-		var move int
-		fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.name)
-		fmt.Scanln(&move)
-		elem, ok := legal[move]
-		if !ok {
-			fmt.Printf("%v INVALID MOVE!", elem)
-		} else {
-			flip(move, curr, gptr)
-		}
-	}
+func result(gptr *Game) {
 	o, x := score(*gptr)
 	fmt.Println("------GAME OVER!------")
 	printBoard(gptr.state.board)
@@ -254,4 +239,92 @@ func PlayGame() {
 		fmt.Printf("RESULT: TIE GAME!")
 	}
 	fmt.Println("Thank you for playing Gothello!")
+}
+
+func gameStatus(gptr *Game) (Player, map[int]bool) {
+	o, x := score(*gptr)
+	curr := getPlayer(gptr.state.turn, *gptr)
+	legal := availableMoves(curr, *gptr)
+
+	fmt.Printf("CURRENT TURN: %v, %s\n", curr.name, gptr.state.turn)
+	fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
+	fmt.Printf("LEGAL MOVES FOR %s: %v\n", gptr.state.turn, legal)
+	return curr, legal
+}
+
+func humanMove(curr Player, legal map[int]bool, gptr *Game) {
+	var move int
+	fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.name)
+	fmt.Scanln(&move)
+	elem, ok := legal[move]
+	if !ok {
+		fmt.Printf("%v INVALID MOVE!", elem)
+	} else {
+		flip(move, curr, gptr)
+	}
+}
+
+func initRandy() (*Player, *Player) {
+	var name string
+	fmt.Printf("Initializing Randy...complete! Randy will play as \"O\"")
+	fmt.Printf("Enter your name:")
+	fmt.Scanln(&name)
+	p1, p2 := initializePlayer("Randy", "O"), initializePlayer(name, "X")
+	return p1, p2
+}
+
+func HumanGame() {
+	p1, p2 := getPlayers()
+	gptr, _ := initializeGame(*p1, *p2)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+	for !gameOver(*gptr) {
+		printBoard(gptr.state.board)
+		curr, legal := gameStatus(gptr)
+		humanMove(curr, legal, gptr)
+	}
+	result(gptr)
+}
+
+func RandyGame() {
+	p1, p2 := initRandy()
+	gptr, _ := initializeGame(*p1, *p2)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+	for !gameOver(*gptr) {
+		printBoard(gptr.state.board)
+		curr, legal := gameStatus(gptr)
+		if gptr.state.turn == "O" {
+			fmt.Printf("Randy is thinking on a move...\n")
+			move := bots.RandyMove(legal)
+			fmt.Printf("Randy chose: %d", move)
+			flip(move, curr, gptr)
+		} else {
+			humanMove(curr, legal, gptr)
+		}
+	}
+	result(gptr)
+}
+
+func MaxGame() {
+
+}
+
+func displayHelpMsg() {
+
+}
+
+func PlayGame() {
+	gameType := gameType()
+	switch {
+	case gameType == 1:
+		HumanGame()
+	case gameType == 2:
+		RandyGame()
+	case gameType == 3:
+		MaxGame()
+	case gameType == 4:
+		displayHelpMsg()
+	default:
+		fmt.Println("EXITING....")
+	}
+
 }
