@@ -220,14 +220,14 @@ func playGame() {
 	//}
 	p1, p2 := getPlayers()
 	gptr, _ := initializeGame(*p1, *p2)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
 	for !gameOver(*gptr) {
 		printBoard(gptr.state.board)
 		o, x := score(*gptr)
 		curr := getPlayer(gptr.state.turn, *gptr)
 		legal := availableMoves(curr, *gptr)
-		fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
 		fmt.Printf("CURRENT TURN: %v, %s\n", curr.name, gptr.state.turn)
-		fmt.Printf("SCORE:	White: %d Black: %d\n", o, x)
+		fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
 		fmt.Printf("LEGAL MOVES FOR %s: %v\n", gptr.state.turn, legal)
 		var move int
 		fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.name)
