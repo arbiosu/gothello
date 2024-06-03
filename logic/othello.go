@@ -14,13 +14,13 @@ type Player struct {
 
 /* Represents a Board in a Game of Othello */
 type Board struct {
-	board      [100]string
+	Board      [100]string
 	players    []Player
 	directions [8]int
 	turn       string
 }
 
-/* Captures board state */
+/* Captures Board state */
 type history struct {
 	moves []Board
 }
@@ -36,7 +36,7 @@ type Game struct {
 	X     int
 }
 
-func initializePlayer(name, piece string) *Player {
+func InitializePlayer(name, piece string) *Player {
 	p := Player{name, piece}
 	return &p
 }
@@ -46,27 +46,27 @@ func validSquare(i int) bool {
 	return (i%10 >= 1 && i%10 <= 8)
 }
 
-func initializeBoard(b *Board) *Board {
+func InitializeBoard(b *Board) *Board {
 	for i := 0; i < 100; i++ {
-		b.board[i] = "*"
+		b.Board[i] = "*"
 	}
 	for i := 11; i < 89; i++ {
 		if validSquare(i) {
-			b.board[i] = "."
+			b.Board[i] = "."
 		}
 	}
 
-	b.board[44] = "O"
-	b.board[45] = "X"
-	b.board[54] = "X"
-	b.board[55] = "O"
+	b.Board[44] = "O"
+	b.Board[45] = "X"
+	b.Board[54] = "X"
+	b.Board[55] = "O"
 
 	return b
 }
 
-func initializeGame(p1, p2 Player) (*Game, *Board) {
+func InitializeGame(p1, p2 Player) (*Game, *Board) {
 	b := Board{directions: [8]int{10, -10, 1, -1, 11, -11, 9, -9}, turn: "X"}
-	bptr := initializeBoard(&b)
+	bptr := InitializeBoard(&b)
 	b.players = append(b.players, p1, p2)
 	history := history{}
 	g := Game{b, history, 2, 2}
@@ -74,7 +74,7 @@ func initializeGame(p1, p2 Player) (*Game, *Board) {
 	return &g, bptr
 }
 
-/* Print the board to the terminal */
+/* Print the Board to the terminal */
 func printBoard(b [100]string) {
 	for i := 0; i < 100; i++ {
 		if i%10 == 0 {
@@ -89,10 +89,10 @@ func printBoard(b [100]string) {
 func score(g Game, bot bool) (int, int) {
 	o, x := 0, 0
 	for i := 11; i < 89; i++ {
-		if g.state.board[i] == "O" {
+		if g.state.Board[i] == "O" {
 			o += 1
 		}
-		if g.state.board[i] == "X" {
+		if g.state.Board[i] == "X" {
 			x += 1
 		}
 	}
@@ -116,19 +116,19 @@ func getOpp(piece string) string {
 
 /* Checks if a given move is valid in a direction */
 func validMove(square, direction int, g Game, p Player) bool {
-	if g.state.board[square] != "." {
+	if g.state.Board[square] != "." {
 		return false
 	}
 	opp := getOpp(p.piece)
 	newSquare := square + direction
-	if g.state.board[newSquare] != opp {
+	if g.state.Board[newSquare] != opp {
 		return false
 	}
 	for validSquare(newSquare) {
-		if g.state.board[newSquare] == "." {
+		if g.state.Board[newSquare] == "." {
 			return false
 		}
-		if g.state.board[newSquare] == p.piece {
+		if g.state.Board[newSquare] == p.piece {
 			return true
 		}
 		newSquare += direction
@@ -166,18 +166,18 @@ func availableMoves(p Player, g Game) map[int]bool {
 }
 
 /*
-Flips the pieces in all valid directions. Records state of the board.
+Flips the pieces in all valid directions. Records state of the Board.
 Updates Player turn.
 */
 func flip(square int, p Player, g *Game) {
 	opp := getOpp(p.piece)
 	dirs := validDirections(square, p, *g)
-	g.state.board[square] = p.piece
+	g.state.Board[square] = p.piece
 
 	for i := 0; i < len(dirs); i++ {
 		newSquare := square + dirs[i]
-		for g.state.board[newSquare] == opp {
-			g.state.board[newSquare] = p.piece
+		for g.state.Board[newSquare] == opp {
+			g.state.Board[newSquare] = p.piece
 			newSquare += dirs[i]
 		}
 	}
@@ -189,12 +189,12 @@ func flip(square int, p Player, g *Game) {
 func flipStatic(square int, p Player, g Game) {
 	opp := getOpp(p.piece)
 	dirs := validDirections(square, p, g)
-	g.state.board[square] = p.piece
+	g.state.Board[square] = p.piece
 
 	for i := 0; i < len(dirs); i++ {
 		newSquare := square + dirs[i]
-		for g.state.board[newSquare] == opp {
-			g.state.board[newSquare] = p.piece
+		for g.state.Board[newSquare] == opp {
+			g.state.Board[newSquare] = p.piece
 			newSquare += dirs[i]
 		}
 	}
@@ -227,7 +227,7 @@ func getPlayers() (*Player, *Player) {
 	fmt.Scanln(&name)
 	fmt.Printf("Enter Player 2's name. They will be the \"X\" pieces: ")
 	fmt.Scanln(&name2)
-	p1, p2 := initializePlayer(name, "O"), initializePlayer(name2, "X")
+	p1, p2 := InitializePlayer(name, "O"), InitializePlayer(name2, "X")
 	return p1, p2
 }
 
@@ -242,7 +242,7 @@ func getPlayer(turn string, g Game) Player {
 func result(gptr *Game) {
 	o, x := score(*gptr, false)
 	fmt.Println("------GAME OVER!------")
-	printBoard(gptr.state.board)
+	printBoard(gptr.state.Board)
 	fmt.Printf("FINAL SCORE:	O: %d	X: %d\n", o, x)
 	switch {
 	case o > x:
@@ -285,7 +285,7 @@ func initRandy() (*Player, *Player) {
 	fmt.Printf("Initializing Randy...complete! Randy will play as \"O\"\n")
 	fmt.Printf("Enter your name:")
 	fmt.Scanln(&name)
-	p1, p2 := initializePlayer("Randy", "O"), initializePlayer(name, "X")
+	p1, p2 := InitializePlayer("Randy", "O"), InitializePlayer(name, "X")
 	return p1, p2
 }
 
@@ -294,16 +294,16 @@ func initMax() (*Player, *Player) {
 	fmt.Printf("Initializing Max...complete! Max will play as \"O\"\n")
 	fmt.Printf("Enter your name:")
 	fmt.Scanln(&name)
-	p1, p2 := initializePlayer("Max", "O"), initializePlayer(name, "X")
+	p1, p2 := InitializePlayer("Max", "O"), InitializePlayer(name, "X")
 	return p1, p2
 }
 
 func HumanGame() {
 	p1, p2 := getPlayers()
-	gptr, _ := initializeGame(*p1, *p2)
+	gptr, _ := InitializeGame(*p1, *p2)
 	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
 	for !gameOver(*gptr) {
-		printBoard(gptr.state.board)
+		printBoard(gptr.state.Board)
 		curr, legal := gameStatus(gptr)
 		humanMove(curr, legal, gptr)
 	}
@@ -312,10 +312,10 @@ func HumanGame() {
 
 func RandyGame() {
 	p1, p2 := initRandy()
-	gptr, _ := initializeGame(*p1, *p2)
+	gptr, _ := InitializeGame(*p1, *p2)
 	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
 	for !gameOver(*gptr) {
-		printBoard(gptr.state.board)
+		printBoard(gptr.state.Board)
 		curr, legal := gameStatus(gptr)
 		if gptr.state.turn == "O" {
 			fmt.Printf("Randy is thinking on a move...\n")
@@ -331,10 +331,10 @@ func RandyGame() {
 
 func MaxGame() {
 	p1, p2 := initMax()
-	gptr, _ := initializeGame(*p1, *p2)
+	gptr, _ := InitializeGame(*p1, *p2)
 	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
 	for !gameOver(*gptr) {
-		printBoard(gptr.state.board)
+		printBoard(gptr.state.Board)
 		curr, legal := gameStatus(gptr)
 		if gptr.state.turn == "O" {
 			fmt.Printf("Max is thinking on a move...\n")
