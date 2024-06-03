@@ -16,6 +16,9 @@ func main() {
 }
 
 func test(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	// CORS
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 	p1 := logic.InitializePlayer("Arbi", "O")
 	p2 := logic.InitializePlayer("Tayler", "X")
 	_, bptr := logic.InitializeGame(*p1, *p2)
