@@ -86,7 +86,7 @@ func printBoard(b [100]string) {
 }
 
 /* Returns the current score of a Game. Updates the Game's score */
-func score(g Game) (int, int) {
+func score(g Game, bot bool) (int, int) {
 	o, x := 0, 0
 	for i := 11; i < 89; i++ {
 		if g.state.board[i] == "O" {
@@ -96,9 +96,10 @@ func score(g Game) (int, int) {
 			x += 1
 		}
 	}
-	g.O = o
-	g.X = x
-
+	if !bot {
+		g.O = o
+		g.X = x
+	}
 	return o, x
 }
 
@@ -131,12 +132,11 @@ func validMove(square, direction int, g Game, p Player) bool {
 			return true
 		}
 		newSquare += direction
-		// if newSquare is greater than board length. May need to revisit**
-		if newSquare > 99 {
+		// if newSquare is greater than last valid square. May need to revisit**
+		if newSquare > 89 || newSquare < 11 {
 			return true
 		}
 	}
-
 	return false
 }
 
@@ -185,6 +185,22 @@ func flip(square int, p Player, g *Game) {
 	g.state.turn = opp
 }
 
+/* Used for bot play and calculation - does not affect actual state */
+func flipStatic(square int, p Player, g Game) {
+	opp := getOpp(p.piece)
+	dirs := validDirections(square, p, g)
+	g.state.board[square] = p.piece
+
+	for i := 0; i < len(dirs); i++ {
+		newSquare := square + dirs[i]
+		for g.state.board[newSquare] == opp {
+			g.state.board[newSquare] = p.piece
+			newSquare += dirs[i]
+		}
+	}
+	g.state.turn = opp
+}
+
 /* Checks if a Game is over */
 func gameOver(g Game) bool {
 	o, x := availableMoves(g.state.players[0], g), availableMoves(g.state.players[1], g)
@@ -224,7 +240,7 @@ func getPlayer(turn string, g Game) Player {
 }
 
 func result(gptr *Game) {
-	o, x := score(*gptr)
+	o, x := score(*gptr, false)
 	fmt.Println("------GAME OVER!------")
 	printBoard(gptr.state.board)
 	fmt.Printf("FINAL SCORE:	O: %d	X: %d\n", o, x)
@@ -242,7 +258,7 @@ func result(gptr *Game) {
 }
 
 func gameStatus(gptr *Game) (Player, map[int]bool) {
-	o, x := score(*gptr)
+	o, x := score(*gptr, true)
 	curr := getPlayer(gptr.state.turn, *gptr)
 	legal := availableMoves(curr, *gptr)
 
@@ -266,10 +282,19 @@ func humanMove(curr Player, legal map[int]bool, gptr *Game) {
 
 func initRandy() (*Player, *Player) {
 	var name string
-	fmt.Printf("Initializing Randy...complete! Randy will play as \"O\"")
+	fmt.Printf("Initializing Randy...complete! Randy will play as \"O\"\n")
 	fmt.Printf("Enter your name:")
 	fmt.Scanln(&name)
 	p1, p2 := initializePlayer("Randy", "O"), initializePlayer(name, "X")
+	return p1, p2
+}
+
+func initMax() (*Player, *Player) {
+	var name string
+	fmt.Printf("Initializing Max...complete! Max will play as \"O\"\n")
+	fmt.Printf("Enter your name:")
+	fmt.Scanln(&name)
+	p1, p2 := initializePlayer("Max", "O"), initializePlayer(name, "X")
 	return p1, p2
 }
 
@@ -305,11 +330,26 @@ func RandyGame() {
 }
 
 func MaxGame() {
-
+	p1, p2 := initMax()
+	gptr, _ := initializeGame(*p1, *p2)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+	for !gameOver(*gptr) {
+		printBoard(gptr.state.board)
+		curr, legal := gameStatus(gptr)
+		if gptr.state.turn == "O" {
+			fmt.Printf("Max is thinking on a move...\n")
+			move := bots.RandyMove(legal)
+			fmt.Printf("Max chose: %d", move)
+			flip(move, curr, gptr)
+		} else {
+			humanMove(curr, legal, gptr)
+		}
+	}
+	result(gptr)
 }
 
 func displayHelpMsg() {
-
+	fmt.Println("TODO: PRINT OTHELLO RULES")
 }
 
 func PlayGame() {
@@ -326,5 +366,4 @@ func PlayGame() {
 	default:
 		fmt.Println("EXITING....")
 	}
-
 }
