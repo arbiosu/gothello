@@ -4,11 +4,13 @@ import (
 	"log"
 	"net"
 	"os"
+
+	"github.com/gothello/logic"
 )
 
 const (
 	HOST = "localhost"
-	PORT = "6578"
+	PORT = "8080"
 )
 
 func GoServer() {
@@ -27,7 +29,7 @@ func GoServer() {
 			os.Exit(1)
 		}
 		log.Println("Accepted client!")
-		go processClient(conn)
+		go startGame(conn)
 	}
 }
 
@@ -43,4 +45,25 @@ func processClient(conn net.Conn) {
 		log.Printf("Error writing message: %v", err.Error())
 	}
 	conn.Close()
+}
+
+func startGame(conn net.Conn) {
+	intro := []byte("Enter your name: ")
+	_, err := conn.Write(intro)
+	if err != nil {
+		log.Printf("Error writing message: %v", err.Error())
+	}
+	buf := make([]byte, 1024)
+	msg, err := conn.Read(buf)
+	if err != nil {
+		log.Printf("Error reading message: %v", err.Error())
+	}
+	p := &logic.Player{Name: string(msg), Piece: "X"}
+	randy := &logic.Player{Name: "Randy", Piece: "O"}
+	gptr, _ := logic.InitializeGame(*p, *randy)
+	encoded := logic.EncodeState(gptr)
+	_, err = conn.Write(encoded)
+	if err != nil {
+		log.Printf("Error writing state: %v", err.Error())
+	}
 }

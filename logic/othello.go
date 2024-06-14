@@ -1,6 +1,7 @@
 package logic
 
 import (
+	"encoding/json"
 	"fmt"
 
 	"github.com/gothello/bots"
@@ -8,8 +9,8 @@ import (
 
 /* Represents a Player in a Game of Othello */
 type Player struct {
-	name  string
-	piece string
+	Name  string
+	Piece string
 }
 
 /* Represents a Board in a Game of Othello */
@@ -119,7 +120,7 @@ func validMove(square, direction int, g Game, p Player) bool {
 	if g.state.Board[square] != "." {
 		return false
 	}
-	opp := getOpp(p.piece)
+	opp := getOpp(p.Piece)
 	newSquare := square + direction
 	if g.state.Board[newSquare] != opp {
 		return false
@@ -128,7 +129,7 @@ func validMove(square, direction int, g Game, p Player) bool {
 		if g.state.Board[newSquare] == "." {
 			return false
 		}
-		if g.state.Board[newSquare] == p.piece {
+		if g.state.Board[newSquare] == p.Piece {
 			return true
 		}
 		newSquare += direction
@@ -170,14 +171,14 @@ Flips the pieces in all valid directions. Records state of the Board.
 Updates Player turn.
 */
 func flip(square int, p Player, g *Game) {
-	opp := getOpp(p.piece)
+	opp := getOpp(p.Piece)
 	dirs := validDirections(square, p, *g)
-	g.state.Board[square] = p.piece
+	g.state.Board[square] = p.Piece
 
 	for i := 0; i < len(dirs); i++ {
 		newSquare := square + dirs[i]
 		for g.state.Board[newSquare] == opp {
-			g.state.Board[newSquare] = p.piece
+			g.state.Board[newSquare] = p.Piece
 			newSquare += dirs[i]
 		}
 	}
@@ -187,14 +188,14 @@ func flip(square int, p Player, g *Game) {
 
 /* Used for bot play and calculation - does not affect actual state */
 func flipStatic(square int, p Player, g Game) {
-	opp := getOpp(p.piece)
+	opp := getOpp(p.Piece)
 	dirs := validDirections(square, p, g)
-	g.state.Board[square] = p.piece
+	g.state.Board[square] = p.Piece
 
 	for i := 0; i < len(dirs); i++ {
 		newSquare := square + dirs[i]
 		for g.state.Board[newSquare] == opp {
-			g.state.Board[newSquare] = p.piece
+			g.state.Board[newSquare] = p.Piece
 			newSquare += dirs[i]
 		}
 	}
@@ -232,7 +233,7 @@ func getPlayers() (*Player, *Player) {
 }
 
 func getPlayer(turn string, g Game) Player {
-	if turn == g.state.players[0].piece {
+	if turn == g.state.players[0].Piece {
 		return g.state.players[0]
 	} else {
 		return g.state.players[1]
@@ -247,10 +248,10 @@ func result(gptr *Game) {
 	switch {
 	case o > x:
 		winner := getPlayer("O", *gptr)
-		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.name)
+		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.Name)
 	case o < x:
 		winner := getPlayer("X", *gptr)
-		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.name)
+		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.Name)
 	default:
 		fmt.Printf("RESULT: TIE GAME!")
 	}
@@ -262,7 +263,7 @@ func gameStatus(gptr *Game) (Player, map[int]bool) {
 	curr := getPlayer(gptr.state.turn, *gptr)
 	legal := availableMoves(curr, *gptr)
 
-	fmt.Printf("CURRENT TURN: %v, %s\n", curr.name, gptr.state.turn)
+	fmt.Printf("CURRENT TURN: %v, %s\n", curr.Name, gptr.state.turn)
 	fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
 	fmt.Printf("LEGAL MOVES FOR %s: %v\n", gptr.state.turn, legal)
 	return curr, legal
@@ -270,7 +271,7 @@ func gameStatus(gptr *Game) (Player, map[int]bool) {
 
 func humanMove(curr Player, legal map[int]bool, gptr *Game) {
 	var move int
-	fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.name)
+	fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.Name)
 	fmt.Scanln(&move)
 	elem, ok := legal[move]
 	if !ok {
@@ -301,7 +302,7 @@ func initMax() (*Player, *Player) {
 func HumanGame() {
 	p1, p2 := getPlayers()
 	gptr, _ := InitializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.Name, p1.Piece, p2.Name, p2.Piece)
 	for !gameOver(*gptr) {
 		printBoard(gptr.state.Board)
 		curr, legal := gameStatus(gptr)
@@ -313,7 +314,7 @@ func HumanGame() {
 func RandyGame() {
 	p1, p2 := initRandy()
 	gptr, _ := InitializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.Name, p1.Piece, p2.Name, p2.Piece)
 	for !gameOver(*gptr) {
 		printBoard(gptr.state.Board)
 		curr, legal := gameStatus(gptr)
@@ -332,7 +333,7 @@ func RandyGame() {
 func MaxGame() {
 	p1, p2 := initMax()
 	gptr, _ := InitializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.name, p1.piece, p2.name, p2.piece)
+	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.Name, p1.Piece, p2.Name, p2.Piece)
 	for !gameOver(*gptr) {
 		printBoard(gptr.state.Board)
 		curr, legal := gameStatus(gptr)
@@ -352,6 +353,7 @@ func displayHelpMsg() {
 	fmt.Println("TODO: PRINT OTHELLO RULES")
 }
 
+// Play Othello in the terminal!
 func PlayGame() {
 	gameType := gameType()
 	switch {
@@ -366,4 +368,13 @@ func PlayGame() {
 	default:
 		fmt.Println("EXITING....")
 	}
+}
+
+// Encodes the game board to JSON
+func EncodeState(g *Game) []byte {
+	res, err := json.Marshal(g.state.Board)
+	if err != nil {
+		fmt.Println("ERROR: ", err)
+	}
+	return res
 }

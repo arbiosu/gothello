@@ -1,10 +1,10 @@
 package main
 
 import (
-	"github.com/gothello/api"
+	"github.com/gothello/server"
 )
 
 func main() {
 	// logic.PlayGame()
-	api.GoServer()
+	server.GoServer()
 }
