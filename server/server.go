@@ -1,69 +1,66 @@
 package server
 
 import (
+	"encoding/json"
+	"fmt"
 	"log"
-	"net"
-	"os"
+	"net/http"
 
-	"github.com/gothello/logic"
+	"github.com/gorilla/websocket"
 )
 
-const (
-	HOST = "localhost"
-	PORT = "8080"
-)
+type OnlinePlayer struct {
+	Name string `json:"name"`
+}
 
-func GoServer() {
-	log.Println("Establishing tcp server...")
-	server, err := net.Listen("tcp", HOST+":"+PORT)
-	if err != nil {
-		log.Printf("FAILED! Error: %v", err.Error())
-	}
-	defer server.Close()
-	log.Printf("Listening on %s:%s", HOST, PORT)
-	log.Println("Waiting for client...")
+var upgrader = websocket.Upgrader{
+	ReadBufferSize:  1024,
+	WriteBufferSize: 1024,
+	// Might need to change
+	CheckOrigin: func(r *http.Request) bool { return true },
+}
+
+func handleHome(w http.ResponseWriter, r *http.Request) {
+	fmt.Fprintf(w, "Home")
+}
+
+func socketReader(conn *websocket.Conn) {
 	for {
-		conn, err := server.Accept()
+		msgType, msg, err := conn.ReadMessage()
 		if err != nil {
-			log.Printf("Error accepting connection: %v", err.Error())
-			os.Exit(1)
+			log.Printf("socketReader: Error reading message from client! (%v)", err)
+			break
 		}
-		log.Println("Accepted client!")
-		go startGame(conn)
+		log.Printf("Received: %s", msg)
+		var user OnlinePlayer
+		err = json.Unmarshal(msg, &user)
+		if err != nil {
+			log.Printf("socketReader: Error Unmarshaling JSON! (%v)", err)
+		}
+		err = conn.WriteMessage(msgType, msg)
+		if err != nil {
+			log.Printf("socketReader: Error writing message! (%v)", err)
+		}
 	}
 }
 
-func processClient(conn net.Conn) {
-	buf := make([]byte, 1024)
-	msg, err := conn.Read(buf)
+func handleWs(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	ws, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
-		log.Printf("Error: %v", err.Error())
+		log.Println(err)
 	}
-	log.Printf("MSG: %s", string(buf[:msg]))
-	_, err = conn.Write([]byte("MSG RECEIVED"))
-	if err != nil {
-		log.Printf("Error writing message: %v", err.Error())
-	}
-	conn.Close()
+	log.Println("Client connected")
+	socketReader(ws)
 }
 
-func startGame(conn net.Conn) {
-	intro := []byte("Enter your name: ")
-	_, err := conn.Write(intro)
-	if err != nil {
-		log.Printf("Error writing message: %v", err.Error())
-	}
-	buf := make([]byte, 1024)
-	msg, err := conn.Read(buf)
-	if err != nil {
-		log.Printf("Error reading message: %v", err.Error())
-	}
-	p := &logic.Player{Name: string(msg), Piece: "X"}
-	randy := &logic.Player{Name: "Randy", Piece: "O"}
-	gptr, _ := logic.InitializeGame(*p, *randy)
-	encoded := logic.EncodeState(gptr)
-	_, err = conn.Write(encoded)
-	if err != nil {
-		log.Printf("Error writing state: %v", err.Error())
-	}
+func setupRoutes() {
+	http.HandleFunc("/", handleHome)
+	http.HandleFunc("/ws", handleWs)
+}
+
+func Server() {
+	setupRoutes()
+	log.Println("Initializing server...Go!")
+	log.Fatal(http.ListenAndServe(":7333", nil))
 }

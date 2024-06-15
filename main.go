@@ -6,5 +6,5 @@ import (
 
 func main() {
 	// logic.PlayGame()
-	server.GoServer()
+	server.Server()
 }
