@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+<body>
+
+    <script>
+        let socket = new WebSocket("ws://localhost:7333/ws");
+        console.log("Attempting WS connection...")
+
+        socket.onopen = () => {
+            console.log("Successfully Connected to WS");
+            data = {
+                name: "Arbi"
+            };
+            
+            // socket.send(JSON.stringify({name:"Arbi"}));
+            socket.send(JSON.stringify(data));
+        };
+
+        socket.onclose = (event) => {
+            console.log("Client side closed the connection", event);
+        };
+
+        socket.onerror = (error) => {
+            console.log("socket error: ", error);
+        };
+    </script>
+    
+</body>
+</html>
