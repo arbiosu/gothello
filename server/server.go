@@ -15,10 +15,10 @@ import (
 // Represents the data client and server will send back and forth
 
 type Data struct {
-	Name  string       `json:"name"`
-	Board [100]string  `json:"board"`
-	Move  string       `json:"move"`
-	Legal map[int]bool `json:"legal"`
+	Name  string      `json:"name"`
+	Board [100]string `json:"board"`
+	Move  string      `json:"move"`
+	//Legal map[int]bool `json:"legal"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -71,14 +71,11 @@ func gameLoop(c *websocket.Conn, data *Data) {
 	bot := logic.InitializePlayer("Randy", "O")
 	g, _ := logic.InitializeGame(*user, *bot)
 	// Send the board and the legal moves
-	_, legal := logic.OnlineGameStatus(g)
-	data.Legal = legal
+	//_, legal := logic.OnlineGameStatus(g)
+	//data.Legal = legal
 	data.Board = g.State.Board
-	log.Println("1. ", data.Legal)
-	log.Println("2. ", data.Board)
-	log.Println("3. ", data.Name)
 	d := EncodeData(data)
-	c.WriteMessage(websocket.BinaryMessage, d)
+	c.WriteMessage(websocket.TextMessage, d)
 	for !logic.GameOver(*g) {
 		curr, legal := logic.OnlineGameStatus(g)
 		if g.State.Turn == "O" {
@@ -135,5 +132,5 @@ func setupRoutes() {
 func Server() {
 	setupRoutes()
 	log.Println("Initializing server...Go!")
-	log.Fatal(http.ListenAndServe(":7335", nil))
+	log.Fatal(http.ListenAndServe(":7336", nil))
 }

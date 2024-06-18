@@ -15,7 +15,7 @@
 
     <script>
         document.getElementById("init").onclick = function(event) {
-            let socket = new WebSocket("ws://localhost:7335/ws");
+            let socket = new WebSocket("ws://localhost:7336/ws");
             console.log("Attempting WS connection...")
             let input = document.getElementById("name").value;
 
@@ -41,8 +41,8 @@
             };
 
             socket.onmessage = (event) => {
-                // const game = JSON.parse(event.data);
-                const game = event.data.text().then(g=>console.log(g));
+                const game = JSON.parse(event.data);
+                // const game = event.data.text().then(g=>console.log(g));
                 console.log(game);
             };
         }
