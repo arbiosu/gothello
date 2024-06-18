@@ -5,12 +5,20 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"github.com/gorilla/websocket"
+	"github.com/gothello/bots"
+	"github.com/gothello/logic"
 )
 
-type OnlinePlayer struct {
-	Name string `json:"name"`
+// Represents the data client and server will send back and forth
+
+type Data struct {
+	Name  string       `json:"name"`
+	Board [100]string  `json:"board"`
+	Move  string       `json:"move"`
+	Legal map[int]bool `json:"legal"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -26,22 +34,87 @@ func handleHome(w http.ResponseWriter, r *http.Request) {
 
 func socketReader(conn *websocket.Conn) {
 	for {
-		msgType, msg, err := conn.ReadMessage()
+		_, msg, err := conn.ReadMessage()
 		if err != nil {
 			log.Printf("socketReader: Error reading message from client! (%v)", err)
 			break
 		}
 		log.Printf("Received: %s", msg)
-		var user OnlinePlayer
-		err = json.Unmarshal(msg, &user)
+		var game Data
+		err = json.Unmarshal(msg, &game)
 		if err != nil {
 			log.Printf("socketReader: Error Unmarshaling JSON! (%v)", err)
 		}
-		err = conn.WriteMessage(msgType, msg)
-		if err != nil {
-			log.Printf("socketReader: Error writing message! (%v)", err)
+		gameLoop(conn, &game)
+	}
+	closing := "Thanks for playing!"
+	msg, err := json.Marshal(closing)
+	if err != nil {
+		log.Println("Error encoding closing msg: ", err)
+	}
+	err = conn.WriteMessage(websocket.TextMessage, msg)
+	if err != nil {
+		log.Println("Error writing closing msg: ", err)
+	}
+}
+
+func EncodeData(d *Data) []byte {
+	res, err := json.Marshal(d)
+	if err != nil {
+		log.Println("ERROR encoding state: ", err)
+	}
+	return res
+}
+
+func gameLoop(c *websocket.Conn, data *Data) {
+	user := logic.InitializePlayer(data.Name, "X")
+	bot := logic.InitializePlayer("Randy", "O")
+	g, _ := logic.InitializeGame(*user, *bot)
+	// Send the board and the legal moves
+	_, legal := logic.OnlineGameStatus(g)
+	data.Legal = legal
+	data.Board = g.State.Board
+	log.Println("1. ", data.Legal)
+	log.Println("2. ", data.Board)
+	log.Println("3. ", data.Name)
+	d := EncodeData(data)
+	c.WriteMessage(websocket.BinaryMessage, d)
+	for !logic.GameOver(*g) {
+		curr, legal := logic.OnlineGameStatus(g)
+		if g.State.Turn == "O" {
+			move := bots.RandyMove(legal)
+			logic.Flip(move, curr, g)
+			data.Board = g.State.Board
+			encoded := EncodeData(data)
+			c.WriteMessage(websocket.BinaryMessage, encoded)
+		} else {
+			// Read message
+			msgType, msg, err := c.ReadMessage()
+			if err != nil {
+				log.Printf("gameLoop: Error reading message from client! (%v)", err)
+				break
+			}
+			// Decode
+			var game Data
+			err = json.Unmarshal(msg, &game)
+			if err != nil {
+				log.Printf("gameLoop: Error Unmarshaling JSON! (%v)", err)
+			}
+			// Perform backend logic: make move, send board back
+			move := convertMove(data.Move)
+			logic.Flip(move, curr, g)
+			encoded := EncodeData(&game)
+			c.WriteMessage(msgType, encoded)
 		}
 	}
+}
+
+func convertMove(move string) int {
+	i, err := strconv.Atoi(move)
+	if err != nil {
+		log.Println("Error converting move to integer: ", err)
+	}
+	return i
 }
 
 func handleWs(w http.ResponseWriter, r *http.Request) {
@@ -62,5 +135,5 @@ func setupRoutes() {
 func Server() {
 	setupRoutes()
 	log.Println("Initializing server...Go!")
-	log.Fatal(http.ListenAndServe(":7333", nil))
+	log.Fatal(http.ListenAndServe(":7335", nil))
 }
