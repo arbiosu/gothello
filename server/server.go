@@ -18,7 +18,7 @@ type Data struct {
 	Name  string      `json:"name"`
 	Board [100]string `json:"board"`
 	Move  string      `json:"move"`
-	//Legal map[int]bool `json:"legal"`
+	Legal []int       `json:"legal"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -66,13 +66,22 @@ func EncodeData(d *Data) []byte {
 	return res
 }
 
+func legalMoves(m map[int]bool) []int {
+	var legal []int
+	for k, _ := range m {
+		legal = append(legal, k)
+	}
+	return legal
+}
+
 func gameLoop(c *websocket.Conn, data *Data) {
 	user := logic.InitializePlayer(data.Name, "X")
 	bot := logic.InitializePlayer("Randy", "O")
 	g, _ := logic.InitializeGame(*user, *bot)
 	// Send the board and the legal moves
-	//_, legal := logic.OnlineGameStatus(g)
-	//data.Legal = legal
+	_, l := logic.OnlineGameStatus(g)
+	firstMoves := legalMoves(l)
+	data.Legal = firstMoves
 	data.Board = g.State.Board
 	d := EncodeData(data)
 	c.WriteMessage(websocket.TextMessage, d)
@@ -81,9 +90,11 @@ func gameLoop(c *websocket.Conn, data *Data) {
 		if g.State.Turn == "O" {
 			move := bots.RandyMove(legal)
 			logic.Flip(move, curr, g)
+			currMoves := legalMoves(legal)
+			data.Legal = currMoves
 			data.Board = g.State.Board
 			encoded := EncodeData(data)
-			c.WriteMessage(websocket.BinaryMessage, encoded)
+			c.WriteMessage(websocket.TextMessage, encoded)
 		} else {
 			// Read message
 			msgType, msg, err := c.ReadMessage()
@@ -132,5 +143,5 @@ func setupRoutes() {
 func Server() {
 	setupRoutes()
 	log.Println("Initializing server...Go!")
-	log.Fatal(http.ListenAndServe(":7336", nil))
+	log.Fatal(http.ListenAndServe(":7339", nil))
 }
