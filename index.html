@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Document</title>
+    <link href="index.css" rel="stylesheet" />
 </head>
 <body>
 
@@ -12,42 +13,10 @@
         <input type="text" id="name" name="name"><br>
         <input type="submit" id="init" value="submit">
     </div>
+    <div id="board">
 
-    <script>
-        document.getElementById("init").onclick = function(event) {
-            let socket = new WebSocket("ws://localhost:7336/ws");
-            console.log("Attempting WS connection...")
-            let input = document.getElementById("name").value;
+    </div>
 
-            socket.onopen = () => {
-                console.log("Successfully Connected to WS");
-                data = {
-                    name: input,
-                    board: [],
-                    move: "", 
-                    legal: {}
-                };
-                
-                // socket.send(JSON.stringify({name:"Arbi"}));
-                socket.send(JSON.stringify(data));
-            };
-
-            socket.onclose = (event) => {
-                console.log("Client side closed the connection", event);
-            };
-
-            socket.onerror = (error) => {
-                console.log("socket error: ", error);
-            };
-
-            socket.onmessage = (event) => {
-                const game = JSON.parse(event.data);
-                // const game = event.data.text().then(g=>console.log(g));
-                console.log(game);
-            };
-        }
-
-    </script>
-    
+    <script src="index.js"></script>    
 </body>
 </html>
