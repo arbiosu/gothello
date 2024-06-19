@@ -9,6 +9,6 @@
     padding: 10px;
 }
 
-#legal {
+div[name] {
     background-color: aqua;
 }

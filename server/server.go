@@ -39,7 +39,7 @@ func socketReader(conn *websocket.Conn) {
 			log.Printf("socketReader: Error reading message from client! (%v)", err)
 			break
 		}
-		log.Printf("Received: %s", msg)
+		log.Printf("sr: Received: %s", msg)
 		var game Data
 		err = json.Unmarshal(msg, &game)
 		if err != nil {
@@ -90,8 +90,8 @@ func gameLoop(c *websocket.Conn, data *Data) {
 		if g.State.Turn == "O" {
 			move := bots.RandyMove(legal)
 			logic.Flip(move, curr, g)
-			currMoves := legalMoves(legal)
-			data.Legal = currMoves
+			_, userMoves := logic.OnlineGameStatus(g)
+			data.Legal = legalMoves(userMoves)
 			data.Board = g.State.Board
 			encoded := EncodeData(data)
 			c.WriteMessage(websocket.TextMessage, encoded)
@@ -143,5 +143,5 @@ func setupRoutes() {
 func Server() {
 	setupRoutes()
 	log.Println("Initializing server...Go!")
-	log.Fatal(http.ListenAndServe(":7339", nil))
+	log.Fatal(http.ListenAndServe(":7340", nil))
 }

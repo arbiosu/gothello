@@ -2,7 +2,7 @@
 
 document.getElementById("init").onclick = function(event) {
     document.getElementById("init").remove();
-    let socket = new WebSocket("ws://localhost:7339/ws");
+    let socket = new WebSocket("ws://localhost:7340/ws");
     console.log("Attempting WS connection...")
     let input = document.getElementById("name").value;
 
@@ -35,23 +35,38 @@ document.getElementById("init").onclick = function(event) {
         const moves = game["legal"];
         displayBoard(board);
         elems = displayLegalMoves(moves);
+        for (let i = 0; i < elems.length; i++) {
+            elems[i].addEventListener('click', function (e) {
+                console.log(elems[i]);
+                let data = {
+                    name: input, 
+                    board: board,
+                    move: elems[i].id,
+                    legal: []
+                };
+                console.log("Making move...");
+                socket.send(JSON.stringify(data));
+            })
+        }
     };
 }
 
 // Displays the current game state
 // board: a 100 element array of strings representing the current game state
 function displayBoard(board) {
+    let boardElem = document.getElementById("board");
+    boardElem.innerHTML = "";
+    let row;
     for (let i = 0; i < 100; i++) {
         if (i%10 === 0) {
-            let row = document.createElement("div");
-            document.getElementById("board").appendChild(row);
+            row = document.createElement("div");
             row.className = "row";
+            boardElem.appendChild(row)
         }
         let column = document.createElement("div");
         column.innerHTML = board[i];
         column.className = "column";
-        let index = i.toString();
-        column.id = index;
+        column.id = i.toString();
         row.appendChild(column);
     }
 }
@@ -61,7 +76,7 @@ function displayLegalMoves(legal) {
     const elems = [];
     for (let i = 0; i < legal.length; i++) {
         let move = document.getElementById(legal[i]);
-        move.id = "legal";
+        move.setAttribute("name", "legal");
         elems.push(move);
     }
     return elems
