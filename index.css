@@ -1,0 +1,14 @@
+#board {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: x-large;
+}
+
+.column {
+    padding: 10px;
+}
+
+#legal {
+    background-color: aqua;
+}
