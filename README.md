@@ -1,6 +1,6 @@
 ## Gothello
 
-[Test](imgs/gothello.png)
+![Test](imgs/gothello.png)
 
 TODO: 
 1. Styles
