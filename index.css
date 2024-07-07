@@ -5,10 +5,23 @@
     font-size: x-large;
 }
 
+body {
+    font-family: "VT323", monospace;
+    font-weight: 400;
+    font-style: normal;
+    background-color: #313234;
+    color: aliceblue;
+}
+
+#intro {
+    margin: auto;
+    width: 50%;
+}
+
 .column {
     padding: 10px;
 }
 
 div[name] {
-    background-color: aqua;
+    background-color: #19C846;
 }

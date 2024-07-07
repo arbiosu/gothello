@@ -1,10 +1,10 @@
 // JS logic
 
 document.getElementById("init").onclick = function(event) {
-    document.getElementById("init").remove();
-    let socket = new WebSocket("ws://localhost:7340/ws");
+    let socket = new WebSocket("ws://localhost:7341/ws");
     console.log("Attempting WS connection...")
     let input = document.getElementById("name").value;
+    document.getElementById("intro").remove();
 
     socket.onopen = () => {
         console.log("Successfully Connected to WS");
@@ -15,12 +15,11 @@ document.getElementById("init").onclick = function(event) {
             legal: []
         };
         
-        // socket.send(JSON.stringify({name:"Arbi"}));
         socket.send(JSON.stringify(data));
     };
 
     socket.onclose = (event) => {
-        console.log("Client side closed the connection", event);
+        console.log("Server side closed the connection", event);
     };
 
     socket.onerror = (error) => {
@@ -29,7 +28,6 @@ document.getElementById("init").onclick = function(event) {
 
     socket.onmessage = (event) => {
         const game = JSON.parse(event.data);
-        // const game = event.data.text().then(g=>console.log(g));
         console.log(game);
         const board = game["board"];
         const moves = game["legal"];
@@ -37,15 +35,15 @@ document.getElementById("init").onclick = function(event) {
         elems = displayLegalMoves(moves);
         for (let i = 0; i < elems.length; i++) {
             elems[i].addEventListener('click', function (e) {
-                console.log(elems[i]);
-                let data = {
+                console.log(elems[i].id);
+                let newData = {
                     name: input, 
                     board: board,
                     move: elems[i].id,
                     legal: []
                 };
                 console.log("Making move...");
-                socket.send(JSON.stringify(data));
+                socket.send(JSON.stringify(newData));
             })
         }
     };
