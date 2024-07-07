@@ -1,5 +1,7 @@
 ## Gothello
 
+[Test](imgs/gothello.png)
+
 TODO: 
 1. Styles
 2. Add scoreboard
