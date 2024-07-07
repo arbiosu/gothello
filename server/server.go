@@ -6,6 +6,7 @@ import (
 	"log"
 	"net/http"
 	"strconv"
+	"time"
 
 	"github.com/gorilla/websocket"
 	"github.com/gothello/bots"
@@ -13,7 +14,6 @@ import (
 )
 
 // Represents the data client and server will send back and forth
-
 type Data struct {
 	Name  string      `json:"name"`
 	Board [100]string `json:"board"`
@@ -66,6 +66,7 @@ func EncodeData(d *Data) []byte {
 	return res
 }
 
+// Convert the Legal Moves Map to an array
 func legalMoves(m map[int]bool) []int {
 	var legal []int
 	for k, _ := range m {
@@ -88,6 +89,7 @@ func gameLoop(c *websocket.Conn, data *Data) {
 	for !logic.GameOver(*g) {
 		curr, legal := logic.OnlineGameStatus(g)
 		if g.State.Turn == "O" {
+			time.Sleep(2000 * time.Millisecond)
 			move := bots.RandyMove(legal)
 			logic.Flip(move, curr, g)
 			_, userMoves := logic.OnlineGameStatus(g)
@@ -109,12 +111,14 @@ func gameLoop(c *websocket.Conn, data *Data) {
 				log.Printf("gameLoop: Error Unmarshaling JSON! (%v)", err)
 			}
 			// Perform backend logic: make move, send board back
-			move := convertMove(data.Move)
+			move := convertMove(game.Move)
 			logic.Flip(move, curr, g)
+			game.Board = g.State.Board
 			encoded := EncodeData(&game)
 			c.WriteMessage(msgType, encoded)
 		}
 	}
+	log.Println("GAME OVER")
 }
 
 func convertMove(move string) int {
@@ -143,5 +147,5 @@ func setupRoutes() {
 func Server() {
 	setupRoutes()
 	log.Println("Initializing server...Go!")
-	log.Fatal(http.ListenAndServe(":7340", nil))
+	log.Fatal(http.ListenAndServe(":7341", nil))
 }
