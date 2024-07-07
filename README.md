@@ -1,6 +1,8 @@
 ## Gothello
 
 TODO: 
-1. Refactor terminal code
-2. **Issue**: game resets every few moves
-3. **Issue**: client disconnects?
+1. Styles
+2. Add scoreboard
+3. Add introduction and rules
+4. Deploy
+5. Add other bots
