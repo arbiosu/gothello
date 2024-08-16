@@ -9,7 +9,6 @@ import (
 	"time"
 
 	"github.com/gorilla/websocket"
-	"github.com/gothello/bots"
 	"github.com/gothello/logic"
 )
 
@@ -90,7 +89,7 @@ func gameLoop(c *websocket.Conn, data *Data) {
 		curr, legal := logic.OnlineGameStatus(g)
 		if g.State.Turn == "O" {
 			time.Sleep(2000 * time.Millisecond)
-			move := bots.RandyMove(legal)
+			move := logic.RandyMove(legal)
 			logic.Flip(move, curr, g)
 			_, userMoves := logic.OnlineGameStatus(g)
 			data.Legal = legalMoves(userMoves)

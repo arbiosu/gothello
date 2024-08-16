@@ -1,8 +1,10 @@
 package main
 
-import "github.com/gothello/server"
+import (
+	"github.com/gothello/logic"
+)
 
 func main() {
-	// logic.PlayGame()
-	server.Server()
+	logic.PlayGame()
+	// server.Server()
 }
