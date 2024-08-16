@@ -1,10 +1,7 @@
 package logic
 
 import (
-	"encoding/json"
 	"fmt"
-
-	"github.com/gothello/bots"
 )
 
 /* Represents a Player in a Game of Othello */
@@ -133,9 +130,9 @@ func validMove(square, direction int, g Game, p Player) bool {
 			return true
 		}
 		newSquare += direction
-		// if newSquare is greater than last valid square. May need to revisit**
-		if newSquare > 89 || newSquare < 11 {
-			return true
+		// TODO: may be able to get away with removing this?
+		if g.State.Board[newSquare] == "*" {
+			return false
 		}
 	}
 	return false
@@ -172,6 +169,12 @@ Updates Player Turn.
 */
 func Flip(square int, p Player, g *Game) {
 	opp := getOpp(p.Piece)
+	if !validSquare(square) {
+		if square == -1 {
+			g.State.Turn = opp
+		}
+		return
+	}
 	dirs := validDirections(square, p, *g)
 	g.State.Board[square] = p.Piece
 
@@ -186,7 +189,7 @@ func Flip(square int, p Player, g *Game) {
 	g.State.Turn = opp
 }
 
-/* Used for bot play and calculation - does not affect actual state
+// Used for bot play and calculation - does not affect actual state
 func flipStatic(square int, p Player, g Game) {
 	opp := getOpp(p.Piece)
 	dirs := validDirections(square, p, g)
@@ -199,9 +202,7 @@ func flipStatic(square int, p Player, g Game) {
 			newSquare += dirs[i]
 		}
 	}
-	g.State.Turn = opp
 }
-*/
 
 /* Checks if a Game is over */
 func GameOver(g Game) bool {
@@ -233,8 +234,8 @@ func getPlayers() (*Player, *Player) {
 	return p1, p2
 }
 
-func getPlayer(Turn string, g Game) Player {
-	if Turn == g.State.players[0].Piece {
+func getPlayer(turn string, g Game) Player {
+	if turn == g.State.players[0].Piece {
 		return g.State.players[0]
 	} else {
 		return g.State.players[1]
@@ -328,7 +329,7 @@ func RandyGame() {
 		curr, legal := gameStatus(gptr)
 		if gptr.State.Turn == "O" {
 			fmt.Printf("Randy is thinking on a move...\n")
-			move := bots.RandyMove(legal)
+			move := RandyMove(legal)
 			fmt.Printf("Randy chose: %d", move)
 			Flip(move, curr, gptr)
 		} else {
@@ -347,7 +348,7 @@ func MaxGame() {
 		curr, legal := gameStatus(gptr)
 		if gptr.State.Turn == "O" {
 			fmt.Printf("Max is thinking on a move...\n")
-			move := bots.RandyMove(legal)
+			move := MaxMove(gptr, curr, 3)
 			fmt.Printf("Max chose: %d", move)
 			Flip(move, curr, gptr)
 		} else {
@@ -378,11 +379,97 @@ func PlayGame() {
 	}
 }
 
-// Encodes the game board to JSON
-func EncodeState(g *Game) []byte {
-	res, err := json.Marshal(g.State.Board)
-	if err != nil {
-		fmt.Println("ERROR: ", err)
+func heuristic(g *Game, p Player) int {
+	o, x := 0, 0
+	for i := 11; i < 89; i++ {
+		if g.State.Board[i] == "O" {
+			mappedIndex := mapToStaticWeights(i)
+			o += StaticWeights[mappedIndex]
+		}
+		if g.State.Board[i] == "X" {
+			mappedIndex := mapToStaticWeights(i)
+			x += StaticWeights[mappedIndex]
+		}
 	}
-	return res
+	if p.Piece == "O" {
+		return o - x
+	}
+	return x - o
+}
+
+func minimax(g Game, depth int, isMax bool, p Player) int {
+	if GameOver(g) || depth == 0 {
+		return heuristic(&g, p)
+	}
+	legalMoves := availableMoves(p, g)
+	if len(legalMoves) == 0 {
+		// Pass turn to opponent
+		return minimax(g, depth-1, !isMax, getPlayer(getOpp(p.Piece), g))
+	}
+	if isMax {
+		maxEval := -1000
+		for move := range legalMoves {
+			gCopy := g
+			flipStatic(move, p, gCopy)
+			eval := minimax(gCopy, depth-1, false, getPlayer(getOpp(p.Piece), gCopy))
+			if eval > maxEval {
+				maxEval = eval
+			}
+		}
+		return maxEval
+	} else {
+		minEval := 1000
+		for move := range legalMoves {
+			gCopy := g
+			flipStatic(move, p, gCopy)
+			eval := minimax(gCopy, depth-1, true, getPlayer(getOpp(p.Piece), gCopy))
+			if eval < minEval {
+				minEval = eval
+			}
+		}
+		return minEval
+	}
+}
+
+func MaxMove(g *Game, p Player, depth int) int {
+	bestMove := -1
+	bestValue := -10000
+	legalMoves := availableMoves(p, *g)
+
+	for move := range legalMoves {
+		gCopy := *g
+		flipStatic(move, p, gCopy)
+		moveValue := minimax(gCopy, depth, false, getPlayer(getOpp(p.Piece), gCopy))
+		if moveValue > bestValue {
+			bestValue = moveValue
+			bestMove = move
+		}
+	}
+	return bestMove
+}
+
+// Get a pseudorandom move for the Randy bot
+func RandyMove(moves map[int]bool) int {
+	for k := range moves {
+		return k
+	}
+	return 0
+}
+
+/*
+Represents heuristic values for certain squares on a Board
+
+From: https://courses.cs.washington.edu/courses/cse573/04au/Project/mini1/RUSSIA/Final_Paper.pdf
+*/
+var StaticWeights = [...]int{
+	4, -3, 2, 2, 2, 2, -3, 4, -3, -4, -1, -1, -1, -1, -4, -3, 2, -1, 1, 0, 0,
+	1, -1, 2, 2, -1, 0, 1, 1, 0, -1, 2, 2, -1, 0, 1, 1, 0, -1, 2, 2, -1, 1, 0,
+	0, 1, -1, 2, -3, -4, -1, -1, -1, -1, -4, -3, 4, -3, 2, 2, 2, 2, -3, 4,
+}
+
+func mapToStaticWeights(i int) int {
+	row := (i / 10) - 1
+	col := (i % 10) - 1
+	// fmt.Printf("SW mapped to: %d\n", (row*8 + col))
+	return row*8 + col
 }
