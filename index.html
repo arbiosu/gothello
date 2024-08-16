@@ -13,17 +13,21 @@
 
     <div id="intro">
         <h2>Welcome to Gothello!</h2>
-        <h4>Test your skills against Randy, a bot that plays
-            random moves.
+        <h4>Test your skills against Max, a bot that uses the minimax algorithm
+            to pick moves.
         </h4>
 
         <label for="name">Enter your name: </label><br>
         <input type="text" id="name" name="name"><br><br>
         <input type="submit" id="init" value="Play">
     </div>
-    <div id="board">
 
+    <div id="scoreBoard">
+        <div id="white"></div>
+        <div id="black"></div>
     </div>
+
+    <div id="board"></div>
 
     <script src="index.js"></script>    
 </body>

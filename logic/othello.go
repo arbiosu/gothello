@@ -271,11 +271,11 @@ func gameStatus(gptr *Game) (Player, map[int]bool) {
 	return curr, legal
 }
 
-func OnlineGameStatus(g *Game) (Player, map[int]bool) {
-	//o, x := score(*g, true)
+func OnlineGameStatus(g *Game) (Player, map[int]bool, int, int) {
+	o, x := score(*g, true)
 	curr := getPlayer(g.State.Turn, *g)
 	legal := availableMoves(curr, *g)
-	return curr, legal
+	return curr, legal, o, x
 }
 
 func humanMove(curr Player, legal map[int]bool, gptr *Game) {

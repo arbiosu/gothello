@@ -4,7 +4,6 @@
 
 TODO: 
 1. Styles
-2. Add scoreboard
-3. Add introduction and rules
+2. Add introduction and rules
+3. Fix end game
 4. Deploy
-5. Add other bots

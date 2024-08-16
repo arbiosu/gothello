@@ -14,10 +14,13 @@ import (
 
 // Represents the data client and server will send back and forth
 type Data struct {
-	Name  string      `json:"name"`
-	Board [100]string `json:"board"`
-	Move  string      `json:"move"`
-	Legal []int       `json:"legal"`
+	Name     string      `json:"name"`
+	Board    [100]string `json:"board"`
+	Move     string      `json:"move"`
+	Legal    []int       `json:"legal"`
+	O        int         `json:"o"`
+	X        int         `json:"x"`
+	GameOver int         `json:"gameOver"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -76,24 +79,28 @@ func legalMoves(m map[int]bool) []int {
 
 func gameLoop(c *websocket.Conn, data *Data) {
 	user := logic.InitializePlayer(data.Name, "X")
-	bot := logic.InitializePlayer("Randy", "O")
+	bot := logic.InitializePlayer("Max", "O")
 	g, _ := logic.InitializeGame(*user, *bot)
 	// Send the board and the legal moves
-	_, l := logic.OnlineGameStatus(g)
+	_, l, _, _ := logic.OnlineGameStatus(g)
 	firstMoves := legalMoves(l)
 	data.Legal = firstMoves
 	data.Board = g.State.Board
+	data.O = 0
+	data.X = 0
 	d := EncodeData(data)
 	c.WriteMessage(websocket.TextMessage, d)
 	for !logic.GameOver(*g) {
-		curr, legal := logic.OnlineGameStatus(g)
+		curr, _, _, _ := logic.OnlineGameStatus(g)
 		if g.State.Turn == "O" {
-			time.Sleep(2000 * time.Millisecond)
-			move := logic.RandyMove(legal)
+			time.Sleep(1000 * time.Millisecond)
+			move := logic.MaxMove(g, curr, 3)
 			logic.Flip(move, curr, g)
-			_, userMoves := logic.OnlineGameStatus(g)
+			_, userMoves, o, x := logic.OnlineGameStatus(g)
 			data.Legal = legalMoves(userMoves)
 			data.Board = g.State.Board
+			data.O = o
+			data.X = x
 			encoded := EncodeData(data)
 			c.WriteMessage(websocket.TextMessage, encoded)
 		} else {
@@ -112,12 +119,18 @@ func gameLoop(c *websocket.Conn, data *Data) {
 			// Perform backend logic: make move, send board back
 			move := convertMove(game.Move)
 			logic.Flip(move, curr, g)
+			_, _, o, x := logic.OnlineGameStatus(g)
 			game.Board = g.State.Board
+			game.O = o
+			game.X = x
 			encoded := EncodeData(&game)
 			c.WriteMessage(msgType, encoded)
 		}
 	}
 	log.Println("GAME OVER")
+	data.GameOver = 1
+	encoded := EncodeData(data)
+	c.WriteMessage(websocket.TextMessage, encoded)
 }
 
 func convertMove(move string) int {

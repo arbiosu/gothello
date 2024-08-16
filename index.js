@@ -12,7 +12,10 @@ document.getElementById("init").onclick = function(event) {
             name: input,
             board: [],
             move: "", 
-            legal: []
+            legal: [], 
+            o: 0,
+            x: 0,
+            gameOver: 0,
         };
         
         socket.send(JSON.stringify(data));
@@ -31,7 +34,26 @@ document.getElementById("init").onclick = function(event) {
         console.log(game);
         const board = game["board"];
         const moves = game["legal"];
+        const o = game["o"]
+        const x = game["x"]
+        const gameOver = game["gameOver"]
+        if (gameOver == 1) {
+            socket.close()
+        }
+        displayScoreBoard(o, x)
         displayBoard(board);
+        if (moves == null) {
+            let endData = {
+                name: input, 
+                board: board,
+                move: 0,
+                legal: [], 
+                o: 0, 
+                x: 0,
+            };
+            console.log("No moves left for player...");
+            socket.send(JSON.stringify(endData));
+        }
         elems = displayLegalMoves(moves);
         for (let i = 0; i < elems.length; i++) {
             elems[i].addEventListener('click', function (e) {
@@ -40,7 +62,9 @@ document.getElementById("init").onclick = function(event) {
                     name: input, 
                     board: board,
                     move: elems[i].id,
-                    legal: []
+                    legal: [], 
+                    o: 0, 
+                    x: 0,
                 };
                 console.log("Making move...");
                 socket.send(JSON.stringify(newData));
@@ -67,6 +91,14 @@ function displayBoard(board) {
         column.id = i.toString();
         row.appendChild(column);
     }
+}
+
+function displayScoreBoard(o, x) {
+    let whiteScore = document.getElementById("white");
+    let blackScore = document.getElementById("black");
+
+    whiteScore.innerHTML = "O: " + o
+    blackScore.innerHTML = "X: " + x
 }
 
 // legal: the legal moves for the player
