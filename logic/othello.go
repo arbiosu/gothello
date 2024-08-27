@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"os"
 )
 
 /* Represents a Player in a Game of Othello */
@@ -137,6 +138,7 @@ func validSquare(i int) bool {
 }
 
 // Returns a string of the opponent's piece
+// TODO: make it return a Player
 func (g *Game) getOpp() string {
 	var opp string
 	if g.State.Turn == "X" {
@@ -180,7 +182,7 @@ func (g *Game) validMove(square, direction int) bool {
 	return false
 }
 
-/* Returns a slice of all valid directions for a given move */
+// Returns a slice of all valid directions for a given move
 func (g *Game) validDirections(square int) []int {
 	valid := make([]int, 0, 8)
 	for i := 0; i < len(g.State.directions); i++ {
@@ -215,12 +217,12 @@ func (g *Game) Flip(square int) {
 		return
 	}
 	dirs := g.validDirections(square)
-	g.State.Board[square] = p.Piece
+	g.State.Board[square] = g.State.Turn
 
 	for i := 0; i < len(dirs); i++ {
 		newSquare := square + dirs[i]
 		for g.State.Board[newSquare] == opp {
-			g.State.Board[newSquare] = p.Piece
+			g.State.Board[newSquare] = g.State.Turn
 			newSquare += dirs[i]
 		}
 	}
@@ -229,22 +231,25 @@ func (g *Game) Flip(square int) {
 }
 
 // Used for bot play and calculation - does not affect actual state
-func flipStatic(square int, p Player, g Game) {
-	opp := getOpp(p.Piece)
-	dirs := validDirections(square, p, g)
-	g.State.Board[square] = p.Piece
+func flipStatic(square int, g Game) {
+	opp := g.getOpp()
+	dirs := g.validDirections(square)
+	g.State.Board[square] = g.State.Turn
 
 	for i := 0; i < len(dirs); i++ {
 		newSquare := square + dirs[i]
 		for g.State.Board[newSquare] == opp {
-			g.State.Board[newSquare] = p.Piece
+			g.State.Board[newSquare] = g.State.Turn
 			newSquare += dirs[i]
 		}
 	}
+	g.State.Turn = opp
 }
 
 // Checks if a Game is over
-func (g Game) GameOver() bool {
+// TODO: rethink this and availableMoves func because i dont like this
+func (g *Game) GameOver() bool {
+	curr := g.getCurrentPlayer().Piece
 	// Change turn to O
 	g.State.Turn = "O"
 	o := g.availableMoves()
@@ -252,22 +257,13 @@ func (g Game) GameOver() bool {
 	g.State.Turn = "X"
 	x := g.availableMoves()
 
+	g.State.Turn = curr
+
 	if len(o) < 1 && len(x) < 1 {
 		return true
 	}
 
 	return false
-}
-
-func TestGameOver() {
-	p1, p2 := NewPlayer("1", "X"), NewPlayer("2", "O")
-	p := NewPlayerList(p1, p2)
-	g := NewGame(p)
-	test := g.GameOver()
-	fmt.Printf("test: %s, turn: %s\n", test, g.State.Turn)
-	g.State.Turn = "O"
-	test = g.GameOver()
-	fmt.Printf("test: %s, turn: %s\n", test, g.State.Turn)
 }
 
 func setGameType() int {
@@ -281,138 +277,134 @@ func setGameType() int {
 	return input
 }
 
-func getPlayers() (*Player, *Player) {
+func (g *Game) getCurrentPlayer() *Player {
+	var curr *Player
+	if g.State.Turn == "O" {
+		curr = g.State.Players.O
+	} else {
+		curr = g.State.Players.X
+	}
+	return curr
+}
+
+// Used for minimax evaluation as Turn is not tracked. TODO: rethink
+func (g *Game) getOppPlayer(curr Player) *Player {
+	var opp *Player
+	if curr.Piece == "O" {
+		opp = g.State.Players.X
+	} else {
+		opp = g.State.Players.O
+	}
+	return opp
+}
+
+// TODO: rethink
+func result(g *Game) {
+	o, x := g.UpdateScore(false)
+	fmt.Println("------GAME OVER!------")
+	g.State.printBoard()
+	fmt.Printf("FINAL SCORE:	O: %d	X: %d\n", o, x)
+	switch {
+	case o > x:
+		winner := g.State.Players.O
+		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.Name)
+	case o < x:
+		winner := g.State.Players.X
+		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.Name)
+	default:
+		fmt.Printf("RESULT: TIE GAME!\n")
+	}
+	// fmt.Println("Thank you for playing Gothello!")
+}
+
+// Updates the current status of a Game. Returns a map of the available moves for
+// the Player whose turn it is.
+func (g *Game) GameStatus() map[int]bool {
+	var (
+		o, x  = g.UpdateScore(true)
+		curr  = g.getCurrentPlayer()
+		legal = g.availableMoves()
+	)
+
+	fmt.Printf("CURRENT TURN: %v, %s\n", curr.Name, g.State.Turn)
+	fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
+	fmt.Printf("LEGAL MOVES FOR %s: %v\n", g.State.Turn, legal)
+	return legal
+}
+
+// Process a Human Move in the terminal
+func (g *Game) humanMove(legal map[int]bool) {
+	var move int
+	curr := g.getCurrentPlayer()
+	fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.Name)
+	fmt.Scanln(&move)
+	elem, ok := legal[move]
+	if !ok {
+		fmt.Printf("%v INVALID MOVE!\n", elem)
+	} else {
+		g.Flip(move)
+	}
+}
+
+// Set up the players for a game against two Humans in the terminal.
+func setPlayersHuman() *PlayerList {
 	var name, name2 string
 	fmt.Printf("Enter Player 1's name. They will be the \"O\" pieces: ")
 	fmt.Scanln(&name)
 	fmt.Printf("Enter Player 2's name. They will be the \"X\" pieces: ")
 	fmt.Scanln(&name2)
-	p1, p2 := InitializePlayer(name, "O"), InitializePlayer(name2, "X")
-	return p1, p2
+	p1, p2 := NewPlayer(name, "O"), NewPlayer(name2, "X")
+	players := NewPlayerList(p2, p1)
+	return players
 }
 
-func getPlayer(turn string, g Game) Player {
-	if turn == g.State.players[0].Piece {
-		return g.State.players[0]
-	} else {
-		return g.State.players[1]
-	}
-}
-
-func result(gptr *Game) {
-	o, x := score(*gptr, false)
-	fmt.Println("------GAME OVER!------")
-	printBoard(gptr.State.Board)
-	fmt.Printf("FINAL SCORE:	O: %d	X: %d\n", o, x)
-	switch {
-	case o > x:
-		winner := getPlayer("O", *gptr)
-		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.Name)
-	case o < x:
-		winner := getPlayer("X", *gptr)
-		fmt.Printf("WINNER: %v. CONGRATULATIONS!\n", winner.Name)
-	default:
-		fmt.Printf("RESULT: TIE GAME!")
-	}
-	fmt.Println("Thank you for playing Gothello!")
-}
-
-func gameStatus(gptr *Game) (Player, map[int]bool) {
-	o, x := score(*gptr, true)
-	curr := getPlayer(gptr.State.Turn, *gptr)
-	legal := availableMoves(curr, *gptr)
-
-	fmt.Printf("CURRENT TURN: %v, %s\n", curr.Name, gptr.State.Turn)
-	fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
-	fmt.Printf("LEGAL MOVES FOR %s: %v\n", gptr.State.Turn, legal)
-	return curr, legal
-}
-
-func OnlineGameStatus(g *Game) (Player, map[int]bool, int, int) {
-	o, x := score(*g, true)
-	curr := getPlayer(g.State.Turn, *g)
-	legal := availableMoves(curr, *g)
-	return curr, legal, o, x
-}
-
-func humanMove(curr Player, legal map[int]bool, gptr *Game) {
-	var move int
-	fmt.Printf("%v, enter your move. Choose any of the above legal moves: ", curr.Name)
-	fmt.Scanln(&move)
-	elem, ok := legal[move]
-	if !ok {
-		fmt.Printf("%v INVALID MOVE!", elem)
-	} else {
-		Flip(move, curr, gptr)
-	}
-}
-
-func initRandy() (*Player, *Player) {
+// Set up the players for a game against a Human and a Bot in the terminal.
+func setPlayersBot(bot string) *PlayerList {
 	var name string
-	fmt.Printf("Initializing Randy...complete! Randy will play as \"O\"\n")
-	fmt.Printf("Enter your name:")
+	fmt.Printf("Initializing %s...complete! %s will play as `O`\n", bot, bot)
+	fmt.Printf("Enter your name: ")
 	fmt.Scanln(&name)
-	p1, p2 := InitializePlayer("Randy", "O"), InitializePlayer(name, "X")
-	return p1, p2
-}
-
-func initMax() (*Player, *Player) {
-	var name string
-	fmt.Printf("Initializing Max...complete! Max will play as \"O\"\n")
-	fmt.Printf("Enter your name:")
-	fmt.Scanln(&name)
-	p1, p2 := InitializePlayer("Max", "O"), InitializePlayer(name, "X")
-	return p1, p2
+	fmt.Printf("\nWelcome, %s. Good luck against %s!\n", name, bot)
+	p1, p2 := NewPlayer(bot, "O"), NewPlayer(name, "X")
+	players := NewPlayerList(p2, p1)
+	return players
 }
 
 func HumanGame() {
-	p1, p2 := getPlayers()
-	gptr, _ := InitializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.Name, p1.Piece, p2.Name, p2.Piece)
-	for !GameOver(*gptr) {
-		printBoard(gptr.State.Board)
-		curr, legal := gameStatus(gptr)
-		humanMove(curr, legal, gptr)
+	p := setPlayersHuman()
+	g := NewGame(p)
+	fmt.Printf("PLAYERS: (%s: %s), (%s: %s)\n", p.O.Name, p.O.Piece, p.X.Name, p.X.Piece)
+	for !g.GameOver() {
+		g.State.printBoard()
+		legal := g.GameStatus()
+		g.humanMove(legal)
 	}
-	result(gptr)
+	result(g)
 }
 
-func RandyGame() {
-	p1, p2 := initRandy()
-	gptr, _ := InitializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.Name, p1.Piece, p2.Name, p2.Piece)
-	for !GameOver(*gptr) {
-		printBoard(gptr.State.Board)
-		curr, legal := gameStatus(gptr)
-		if gptr.State.Turn == "O" {
-			fmt.Printf("Randy is thinking on a move...\n")
-			move := RandyMove(legal)
-			fmt.Printf("Randy chose: %d", move)
-			Flip(move, curr, gptr)
+func BotGame(bot string) {
+	p := setPlayersBot(bot)
+	g := NewGame(p)
+	fmt.Printf("PLAYERS: (%s: %s), (%s: %s)\n", p.O.Name, p.O.Piece, p.X.Name, p.X.Piece)
+	for !g.GameOver() {
+		g.State.printBoard()
+		legal := g.GameStatus()
+		var move int
+		if g.State.Turn == "O" {
+			fmt.Printf("%s is thinking on a move...\n", bot)
+			switch bot {
+			case "Randy":
+				move = RandyMove(legal)
+			case "Max":
+				move = MaxMove(g, 3)
+			}
+			fmt.Printf("%s chose: %d\n", move)
+			g.Flip(move)
 		} else {
-			humanMove(curr, legal, gptr)
+			g.humanMove(legal)
 		}
 	}
-	result(gptr)
-}
-
-func MaxGame() {
-	p1, p2 := initMax()
-	gptr, _ := InitializeGame(*p1, *p2)
-	fmt.Printf("PLAYERS: %s: %s, %s: %s\n", p1.Name, p1.Piece, p2.Name, p2.Piece)
-	for !GameOver(*gptr) {
-		printBoard(gptr.State.Board)
-		curr, legal := gameStatus(gptr)
-		if gptr.State.Turn == "O" {
-			fmt.Printf("Max is thinking on a move...\n")
-			move := MaxMove(gptr, curr, 3)
-			fmt.Printf("Max chose: %d", move)
-			Flip(move, curr, gptr)
-		} else {
-			humanMove(curr, legal, gptr)
-		}
-	}
-	result(gptr)
+	result(g)
 }
 
 func displayHelpMsg() {
@@ -421,21 +413,23 @@ func displayHelpMsg() {
 
 // Play Othello in the terminal!
 func PlayGame() {
-	gameType := gameType()
-	switch {
-	case gameType == 1:
+	gameType := setGameType()
+	switch gameType {
+	case 1:
 		HumanGame()
-	case gameType == 2:
-		RandyGame()
-	case gameType == 3:
-		MaxGame()
-	case gameType == 4:
+	case 2:
+		BotGame("Randy")
+	case 3:
+		BotGame("Max")
+	case 4:
 		displayHelpMsg()
 	default:
 		fmt.Println("EXITING....")
 	}
+	os.Exit(0)
 }
 
+// TODO: Test and refactor minimax portion
 func heuristic(g *Game, p Player) int {
 	o, x := 0, 0
 	for i := 11; i < 89; i++ {
@@ -454,21 +448,21 @@ func heuristic(g *Game, p Player) int {
 	return x - o
 }
 
-func minimax(g Game, depth int, isMax bool, p Player) int {
-	if GameOver(g) || depth == 0 {
-		return heuristic(&g, p)
+func (g *Game) minimax(depth int, isMax bool, p Player) int {
+	if g.GameOver() || depth == 0 {
+		return heuristic(g, p)
 	}
-	legalMoves := availableMoves(p, g)
-	if len(legalMoves) == 0 {
-		// Pass turn to opponent
-		return minimax(g, depth-1, !isMax, getPlayer(getOpp(p.Piece), g))
+	legal := g.availableMoves()
+	if len(legal) == 0 {
+		// Pass minimax evaluation turn to opponent
+		return g.minimax(depth-1, !isMax, *g.getOppPlayer(p))
 	}
 	if isMax {
 		maxEval := -1000
-		for move := range legalMoves {
-			gCopy := g
-			flipStatic(move, p, gCopy)
-			eval := minimax(gCopy, depth-1, false, getPlayer(getOpp(p.Piece), gCopy))
+		for move := range legal {
+			gCopy := *g
+			flipStatic(move, gCopy)
+			eval := gCopy.minimax(depth-1, false, *g.getOppPlayer(p))
 			if eval > maxEval {
 				maxEval = eval
 			}
@@ -476,10 +470,10 @@ func minimax(g Game, depth int, isMax bool, p Player) int {
 		return maxEval
 	} else {
 		minEval := 1000
-		for move := range legalMoves {
-			gCopy := g
-			flipStatic(move, p, gCopy)
-			eval := minimax(gCopy, depth-1, true, getPlayer(getOpp(p.Piece), gCopy))
+		for move := range legal {
+			gCopy := *g
+			flipStatic(move, gCopy)
+			eval := g.minimax(depth-1, true, *g.getOppPlayer(p))
 			if eval < minEval {
 				minEval = eval
 			}
@@ -488,15 +482,16 @@ func minimax(g Game, depth int, isMax bool, p Player) int {
 	}
 }
 
-func MaxMove(g *Game, p Player, depth int) int {
+func MaxMove(g *Game, depth int) int {
 	bestMove := -1
 	bestValue := -10000
-	legalMoves := availableMoves(p, *g)
+	legal := g.availableMoves()
 
-	for move := range legalMoves {
+	for move := range legal {
 		gCopy := *g
-		flipStatic(move, p, gCopy)
-		moveValue := minimax(gCopy, depth, false, getPlayer(getOpp(p.Piece), gCopy))
+		flipStatic(move, gCopy)
+		// Bots are always "O"
+		moveValue := gCopy.minimax(depth, false, *g.State.Players.X)
 		if moveValue > bestValue {
 			bestValue = moveValue
 			bestMove = move
