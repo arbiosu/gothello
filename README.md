@@ -3,7 +3,6 @@
 ![Test](imgs/gothello.png)
 
 TODO: 
-1. Styles
+1. Finish refactor
 2. Add introduction and rules
-3. Fix end game
-4. Deploy
+3. Deploy
