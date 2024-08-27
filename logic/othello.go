@@ -10,101 +10,136 @@ type Player struct {
 	Piece string
 }
 
-/* Represents a Board in a Game of Othello */
+type PlayerList struct {
+	X *Player
+	O *Player
+}
+
+func NewPlayer(name, piece string) *Player {
+	return &Player{
+		Name:  name,
+		Piece: piece,
+	}
+}
+
+func NewPlayerList(x, o *Player) *PlayerList {
+	return &PlayerList{
+		X: x,
+		O: o,
+	}
+}
+
+// Represents a Board in a Game of Othello
 type Board struct {
 	Board      [100]string
-	players    []Player
-	directions [8]int
 	Turn       string
+	Score      *Score
+	Players    *PlayerList
+	directions [8]int
 }
 
-/* Captures Board state */
-type history struct {
-	moves []Board
-}
-
-/*
-	 Represents a Game of Othello. O (white) and X (black) hold their respective
-		scores
-*/
-type Game struct {
-	State Board
-	hist  history
-	O     int
-	X     int
-}
-
-func InitializePlayer(name, piece string) *Player {
-	p := Player{name, piece}
-	return &p
-}
-
-/* Determines if a square is valid */
-func validSquare(i int) bool {
-	return (i%10 >= 1 && i%10 <= 8)
-}
-
-func InitializeBoard(b *Board) *Board {
-	for i := 0; i < 100; i++ {
-		b.Board[i] = "*"
-	}
-	for i := 11; i < 89; i++ {
-		if validSquare(i) {
-			b.Board[i] = "."
-		}
-	}
-
-	b.Board[44] = "O"
-	b.Board[45] = "X"
-	b.Board[54] = "X"
-	b.Board[55] = "O"
-
-	return b
-}
-
-func InitializeGame(p1, p2 Player) (*Game, *Board) {
-	b := Board{directions: [8]int{10, -10, 1, -1, 11, -11, 9, -9}, Turn: "X"}
-	bptr := InitializeBoard(&b)
-	b.players = append(b.players, p1, p2)
-	history := history{}
-	g := Game{b, history, 2, 2}
-
-	return &g, bptr
-}
-
-/* Print the Board to the terminal */
-func printBoard(b [100]string) {
-	for i := 0; i < 100; i++ {
+// Print the Board to the console
+func (b Board) printBoard() {
+	for i := 0; i < len(b.Board); i++ {
 		if i%10 == 0 {
 			fmt.Print("\n")
 		}
-		fmt.Printf("%v	", b[i])
+		fmt.Printf("%v	", b.Board[i])
 	}
 	fmt.Printf("\n")
 }
 
-/* Returns the current score of a Game. Updates the Game's score */
-func score(g Game, bot bool) (int, int) {
-	o, x := 0, 0
+func newBoard(players *PlayerList) *Board {
+	b := [100]string{}
+	for i := 0; i < len(b); i++ {
+		b[i] = "*"
+	}
 	for i := 11; i < 89; i++ {
-		if g.State.Board[i] == "O" {
-			o += 1
+		if validSquare(i) {
+			b[i] = "."
 		}
-		if g.State.Board[i] == "X" {
+	}
+
+	b[44] = "O"
+	b[45] = "X"
+	b[54] = "X"
+	b[55] = "O"
+
+	return &Board{
+		Board:      b,
+		Turn:       "X",
+		Score:      newScore(),
+		Players:    players,
+		directions: [8]int{10, -10, 1, -1, 11, -11, 9, -9},
+	}
+}
+
+type Score struct {
+	X int
+	O int
+}
+
+func newScore() *Score {
+	return &Score{
+		X: 2,
+		O: 2,
+	}
+}
+
+// Captures Board state
+type History struct {
+	moves []Board
+}
+
+func newHistory() *History {
+	return &History{}
+}
+
+// Represents a Game of Othello. O (white) and X (black) hold their respective
+// scores
+type Game struct {
+	State   *Board
+	History *History
+}
+
+// Initialize a new game given a PlayerList
+func NewGame(players *PlayerList) *Game {
+	b := newBoard(players)
+	h := newHistory()
+	return &Game{
+		State:   b,
+		History: h,
+	}
+}
+
+// Returns the current score of a Game. If we are just checking the score,
+// does not update the score of the game. TODO: rethink this
+func (g *Game) UpdateScore(check bool) (int, int) {
+	o, x := 0, 0
+	for i := 0; i < len(g.State.Board); i++ {
+		switch g.State.Board[i] {
+		case "O":
+			o += 1
+		case "X":
 			x += 1
 		}
 	}
-	if !bot {
-		g.O = o
-		g.X = x
+	if !check {
+		g.State.Score.O = o
+		g.State.Score.X = x
 	}
 	return o, x
 }
 
-/* Returns a string of the opponents piece */
-func getOpp(piece string) string {
+// Determines if a square is valid
+func validSquare(i int) bool {
+	return (i%10 >= 1 && i%10 <= 8)
+}
+
+// Returns a string of the opponent's piece
+func (g *Game) getOpp() string {
 	var opp string
-	if piece == "X" {
+	if g.State.Turn == "X" {
 		opp = "O"
 	} else {
 		opp = "X"
@@ -113,20 +148,27 @@ func getOpp(piece string) string {
 }
 
 /* Checks if a given move is valid in a direction */
-func validMove(square, direction int, g Game, p Player) bool {
+func (g *Game) validMove(square, direction int) bool {
+	// If the square is not an empty square
 	if g.State.Board[square] != "." {
 		return false
 	}
-	opp := getOpp(p.Piece)
-	newSquare := square + direction
+
+	var (
+		opp       = g.getOpp()
+		newSquare = square + direction
+	)
+	// If the next square in that direction is not the opponent's
 	if g.State.Board[newSquare] != opp {
 		return false
 	}
+	// Check the rest of the row in that direction
 	for validSquare(newSquare) {
 		if g.State.Board[newSquare] == "." {
 			return false
 		}
-		if g.State.Board[newSquare] == p.Piece {
+		// If pieces are sandwiched, return true
+		if g.State.Board[newSquare] == g.State.Turn {
 			return true
 		}
 		newSquare += direction
@@ -139,22 +181,21 @@ func validMove(square, direction int, g Game, p Player) bool {
 }
 
 /* Returns a slice of all valid directions for a given move */
-func validDirections(square int, p Player, g Game) []int {
+func (g *Game) validDirections(square int) []int {
 	valid := make([]int, 0, 8)
 	for i := 0; i < len(g.State.directions); i++ {
-		if validMove(square, g.State.directions[i], g, p) {
+		if g.validMove(square, g.State.directions[i]) {
 			valid = append(valid, g.State.directions[i])
 		}
 	}
 	return valid
 }
 
-func availableMoves(p Player, g Game) map[int]bool {
-	// dirs := make([]int, 0)
+func (g *Game) availableMoves() map[int]bool {
 	moves := make(map[int]bool)
-	for i := 11; i < 89; i++ {
+	for i := 0; i < len(g.State.Board); i++ {
 		if validSquare(i) {
-			check := validDirections(i, p, g)
+			check := g.validDirections(i)
 			if len(check) > 0 {
 				moves[i] = true
 			}
@@ -163,19 +204,17 @@ func availableMoves(p Player, g Game) map[int]bool {
 	return moves
 }
 
-/*
-Flips the pieces in all valid directions. Records state of the Board.
-Updates Player Turn.
-*/
-func Flip(square int, p Player, g *Game) {
-	opp := getOpp(p.Piece)
+// Flips the pieces in all valid directions. Records state of the Board.
+// Updates Player Turn.
+func (g *Game) Flip(square int) {
+	opp := g.getOpp()
 	if !validSquare(square) {
 		if square == -1 {
 			g.State.Turn = opp
 		}
 		return
 	}
-	dirs := validDirections(square, p, *g)
+	dirs := g.validDirections(square)
 	g.State.Board[square] = p.Piece
 
 	for i := 0; i < len(dirs); i++ {
@@ -185,7 +224,7 @@ func Flip(square int, p Player, g *Game) {
 			newSquare += dirs[i]
 		}
 	}
-	g.hist.moves = append(g.hist.moves, g.State)
+	g.History.moves = append(g.History.moves, *g.State)
 	g.State.Turn = opp
 }
 
@@ -204,20 +243,38 @@ func flipStatic(square int, p Player, g Game) {
 	}
 }
 
-/* Checks if a Game is over */
-func GameOver(g Game) bool {
-	o, x := availableMoves(g.State.players[0], g), availableMoves(g.State.players[1], g)
+// Checks if a Game is over
+func (g Game) GameOver() bool {
+	// Change turn to O
+	g.State.Turn = "O"
+	o := g.availableMoves()
+	// Change turn to X
+	g.State.Turn = "X"
+	x := g.availableMoves()
+
 	if len(o) < 1 && len(x) < 1 {
 		return true
 	}
+
 	return false
 }
 
-func gameType() int {
+func TestGameOver() {
+	p1, p2 := NewPlayer("1", "X"), NewPlayer("2", "O")
+	p := NewPlayerList(p1, p2)
+	g := NewGame(p)
+	test := g.GameOver()
+	fmt.Printf("test: %s, turn: %s\n", test, g.State.Turn)
+	g.State.Turn = "O"
+	test = g.GameOver()
+	fmt.Printf("test: %s, turn: %s\n", test, g.State.Turn)
+}
+
+func setGameType() int {
 	var input int
 	fmt.Printf("Enter 1 for to play against a human\n")
 	fmt.Printf("Enter 2 to play against Randy, a bot that selects moves at random\n")
-	fmt.Printf("Enter 3 to play against Max, a minimax bot...\n")
+	fmt.Printf("Enter 3 to play against Max, a minimax bot\n")
 	fmt.Printf("Enter 4 for the rules of Othello\n")
 	fmt.Printf("GAME TYPE: ")
 	fmt.Scanln(&input)
