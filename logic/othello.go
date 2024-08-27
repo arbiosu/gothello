@@ -132,24 +132,7 @@ func (g *Game) UpdateScore(check bool) (int, int) {
 	return o, x
 }
 
-// Determines if a square is valid
-func validSquare(i int) bool {
-	return (i%10 >= 1 && i%10 <= 8)
-}
-
-// Returns a string of the opponent's piece
-// TODO: make it return a Player
-func (g *Game) getOpp() string {
-	var opp string
-	if g.State.Turn == "X" {
-		opp = "O"
-	} else {
-		opp = "X"
-	}
-	return opp
-}
-
-/* Checks if a given move is valid in a direction */
+// Checks if a given move is valid in a direction
 func (g *Game) validMove(square, direction int) bool {
 	// If the square is not an empty square
 	if g.State.Board[square] != "." {
@@ -266,17 +249,6 @@ func (g *Game) GameOver() bool {
 	return false
 }
 
-func setGameType() int {
-	var input int
-	fmt.Printf("Enter 1 for to play against a human\n")
-	fmt.Printf("Enter 2 to play against Randy, a bot that selects moves at random\n")
-	fmt.Printf("Enter 3 to play against Max, a minimax bot\n")
-	fmt.Printf("Enter 4 for the rules of Othello\n")
-	fmt.Printf("GAME TYPE: ")
-	fmt.Scanln(&input)
-	return input
-}
-
 func (g *Game) getCurrentPlayer() *Player {
 	var curr *Player
 	if g.State.Turn == "O" {
@@ -294,6 +266,18 @@ func (g *Game) getOppPlayer(curr Player) *Player {
 		opp = g.State.Players.X
 	} else {
 		opp = g.State.Players.O
+	}
+	return opp
+}
+
+// Returns a string of the opponent's piece
+// TODO: make it return a Player?
+func (g *Game) getOpp() string {
+	var opp string
+	if g.State.Turn == "X" {
+		opp = "O"
+	} else {
+		opp = "X"
 	}
 	return opp
 }
@@ -346,71 +330,6 @@ func (g *Game) humanMove(legal map[int]bool) {
 	}
 }
 
-// Set up the players for a game against two Humans in the terminal.
-func setPlayersHuman() *PlayerList {
-	var name, name2 string
-	fmt.Printf("Enter Player 1's name. They will be the \"O\" pieces: ")
-	fmt.Scanln(&name)
-	fmt.Printf("Enter Player 2's name. They will be the \"X\" pieces: ")
-	fmt.Scanln(&name2)
-	p1, p2 := NewPlayer(name, "O"), NewPlayer(name2, "X")
-	players := NewPlayerList(p2, p1)
-	return players
-}
-
-// Set up the players for a game against a Human and a Bot in the terminal.
-func setPlayersBot(bot string) *PlayerList {
-	var name string
-	fmt.Printf("Initializing %s...complete! %s will play as `O`\n", bot, bot)
-	fmt.Printf("Enter your name: ")
-	fmt.Scanln(&name)
-	fmt.Printf("\nWelcome, %s. Good luck against %s!\n", name, bot)
-	p1, p2 := NewPlayer(bot, "O"), NewPlayer(name, "X")
-	players := NewPlayerList(p2, p1)
-	return players
-}
-
-func HumanGame() {
-	p := setPlayersHuman()
-	g := NewGame(p)
-	fmt.Printf("PLAYERS: (%s: %s), (%s: %s)\n", p.O.Name, p.O.Piece, p.X.Name, p.X.Piece)
-	for !g.GameOver() {
-		g.State.printBoard()
-		legal := g.GameStatus()
-		g.humanMove(legal)
-	}
-	result(g)
-}
-
-func BotGame(bot string) {
-	p := setPlayersBot(bot)
-	g := NewGame(p)
-	fmt.Printf("PLAYERS: (%s: %s), (%s: %s)\n", p.O.Name, p.O.Piece, p.X.Name, p.X.Piece)
-	for !g.GameOver() {
-		g.State.printBoard()
-		legal := g.GameStatus()
-		var move int
-		if g.State.Turn == "O" {
-			fmt.Printf("%s is thinking on a move...\n", bot)
-			switch bot {
-			case "Randy":
-				move = RandyMove(legal)
-			case "Max":
-				move = MaxMove(g, 3)
-			}
-			fmt.Printf("%s chose: %d\n", move)
-			g.Flip(move)
-		} else {
-			g.humanMove(legal)
-		}
-	}
-	result(g)
-}
-
-func displayHelpMsg() {
-	fmt.Println("TODO: PRINT OTHELLO RULES")
-}
-
 // Play Othello in the terminal!
 func PlayGame() {
 	gameType := setGameType()
@@ -427,6 +346,84 @@ func PlayGame() {
 		fmt.Println("EXITING....")
 	}
 	os.Exit(0)
+}
+
+func setGameType() int {
+	var input int
+	fmt.Printf("Enter 1 for to play against a human\n")
+	fmt.Printf("Enter 2 to play against Randy, a bot that selects moves at random\n")
+	fmt.Printf("Enter 3 to play against Max, a minimax bot\n")
+	fmt.Printf("Enter 4 for the rules of Othello\n")
+	fmt.Printf("GAME TYPE: ")
+	fmt.Scanln(&input)
+	return input
+}
+
+// Initialize game against two Humans
+func HumanGame() {
+	p := setPlayersHuman()
+	g := NewGame(p)
+	fmt.Printf("PLAYERS: (%s: %s), (%s: %s)\n", p.O.Name, p.O.Piece, p.X.Name, p.X.Piece)
+	for !g.GameOver() {
+		g.State.printBoard()
+		legal := g.GameStatus()
+		g.humanMove(legal)
+	}
+	result(g)
+}
+
+// Set up the players for a game against two Humans in the terminal.
+func setPlayersHuman() *PlayerList {
+	var name, name2 string
+	fmt.Printf("Enter Player 1's name. They will be the \"O\" pieces: ")
+	fmt.Scanln(&name)
+	fmt.Printf("Enter Player 2's name. They will be the \"X\" pieces: ")
+	fmt.Scanln(&name2)
+	p1, p2 := NewPlayer(name, "O"), NewPlayer(name2, "X")
+	players := NewPlayerList(p2, p1)
+	return players
+}
+
+// Set up the players for a game against a Bot and a Human in the terminal.
+func BotGame(bot string) {
+	p := setPlayersBot(bot)
+	g := NewGame(p)
+	fmt.Printf("PLAYERS: (%s: %s), (%s: %s)\n", p.O.Name, p.O.Piece, p.X.Name, p.X.Piece)
+	for !g.GameOver() {
+		g.State.printBoard()
+		legal := g.GameStatus()
+		var move int
+		if g.State.Turn == "O" {
+			fmt.Printf("%s is thinking on a move...\n", bot)
+			switch bot {
+			case "Randy":
+				move = RandyMove(legal)
+			case "Max":
+				move = MaxMove(g, 3)
+			}
+			fmt.Printf("%s chose: %d\n", bot, move)
+			g.Flip(move)
+		} else {
+			g.humanMove(legal)
+		}
+	}
+	result(g)
+}
+
+// Set up the players for a game against a Human and a Bot in the terminal.
+func setPlayersBot(bot string) *PlayerList {
+	var name string
+	fmt.Printf("Initializing %s...complete! %s will play as `O`\n", bot, bot)
+	fmt.Printf("Enter your name: ")
+	fmt.Scanln(&name)
+	fmt.Printf("\nWelcome, %s. Good luck against %s!\n", name, bot)
+	p1, p2 := NewPlayer(bot, "O"), NewPlayer(name, "X")
+	players := NewPlayerList(p2, p1)
+	return players
+}
+
+func displayHelpMsg() {
+	fmt.Println("TODO: PRINT OTHELLO RULES")
 }
 
 // TODO: Test and refactor minimax portion
@@ -506,6 +503,11 @@ func RandyMove(moves map[int]bool) int {
 		return k
 	}
 	return 0
+}
+
+// Determines if a square is valid
+func validSquare(i int) bool {
+	return (i%10 >= 1 && i%10 <= 8)
 }
 
 /*
