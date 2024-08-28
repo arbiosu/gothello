@@ -14,6 +14,7 @@ var upgrader = websocket.Upgrader{
 	CheckOrigin:     func(r *http.Request) bool { return true },
 }
 
+// The Hub holds all connected clients to the server
 type Hub struct {
 	clients ClientList
 	sync.RWMutex
@@ -37,7 +38,8 @@ func (h *Hub) handleWs(w http.ResponseWriter, r *http.Request) {
 
 	h.addClient(client)
 
-	go client.ReadMessages()
+	go client.readMessages()
+	go client.writeMessages()
 
 }
 
