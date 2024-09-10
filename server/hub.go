@@ -11,7 +11,7 @@ import (
 var upgrader = websocket.Upgrader{
 	ReadBufferSize:  1024,
 	WriteBufferSize: 1024,
-	CheckOrigin:     func(r *http.Request) bool { return true },
+	CheckOrigin:     checkOrigin,
 }
 
 // The Hub holds all connected clients to the server
@@ -58,5 +58,16 @@ func (h *Hub) removeClient(c *Client) {
 	if _, ok := h.clients[c]; ok {
 		c.conn.Close()
 		delete(h.clients, c)
+	}
+}
+
+func checkOrigin(r *http.Request) bool {
+	origin := r.Header.Get("Origin")
+
+	switch origin {
+	case "http://localhost:7342":
+		return true
+	default:
+		return false
 	}
 }

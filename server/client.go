@@ -6,6 +6,18 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// Represents the data client and server will send back and forth
+type GameData struct {
+	Name     string      `json:"name"`
+	Opp      string      `jaon:"opp"` // bot opponent name
+	Board    [100]string `json:"board"`
+	Move     string      `json:"move"`
+	Legal    []int       `json:"legal"`
+	O        int         `json:"o"`
+	X        int         `json:"x"`
+	GameOver int         `json:"gameOver"`
+}
+
 type ClientList map[*Client]bool
 
 type Client struct {
@@ -24,6 +36,7 @@ func NewClient(c *websocket.Conn, h *Hub) *Client {
 	}
 }
 
+// Read a message from a Client
 func (c *Client) readMessages() {
 	defer func() {
 		// Cleanup connection
@@ -44,6 +57,7 @@ func (c *Client) readMessages() {
 	}
 }
 
+// Write a message to a client
 func (c *Client) writeMessages() {
 	defer func() {
 		c.hub.removeClient(c)
