@@ -2,6 +2,7 @@ package logic
 
 import (
 	"fmt"
+	"math"
 	"os"
 )
 
@@ -39,7 +40,7 @@ type Board struct {
 	directions [8]int
 }
 
-// Print the Board to the console
+// Print the Board to the terminal
 func (b Board) printBoard() {
 	for i := 0; i < len(b.Board); i++ {
 		if i%10 == 0 {
@@ -50,6 +51,7 @@ func (b Board) printBoard() {
 	fmt.Printf("\n")
 }
 
+// Initialize a new board
 func newBoard(players *PlayerList) *Board {
 	b := [100]string{}
 	for i := 0; i < len(b); i++ {
@@ -213,22 +215,6 @@ func (g *Game) Flip(square int) {
 	g.State.Turn = opp
 }
 
-// Used for bot play and calculation - does not affect actual state
-func flipStatic(square int, g Game) {
-	opp := g.getOpp()
-	dirs := g.validDirections(square)
-	g.State.Board[square] = g.State.Turn
-
-	for i := 0; i < len(dirs); i++ {
-		newSquare := square + dirs[i]
-		for g.State.Board[newSquare] == opp {
-			g.State.Board[newSquare] = g.State.Turn
-			newSquare += dirs[i]
-		}
-	}
-	g.State.Turn = opp
-}
-
 // Checks if a Game is over
 // TODO: rethink this and availableMoves func because i dont like this
 func (g *Game) GameOver() bool {
@@ -250,36 +236,18 @@ func (g *Game) GameOver() bool {
 }
 
 func (g *Game) getCurrentPlayer() *Player {
-	var curr *Player
 	if g.State.Turn == "O" {
-		curr = g.State.Players.O
-	} else {
-		curr = g.State.Players.X
+		return g.State.Players.O
 	}
-	return curr
-}
-
-// Used for minimax evaluation as Turn is not tracked. TODO: rethink
-func (g *Game) getOppPlayer(curr Player) *Player {
-	var opp *Player
-	if curr.Piece == "O" {
-		opp = g.State.Players.X
-	} else {
-		opp = g.State.Players.O
-	}
-	return opp
+	return g.State.Players.X
 }
 
 // Returns a string of the opponent's piece
-// TODO: make it return a Player?
 func (g *Game) getOpp() string {
-	var opp string
 	if g.State.Turn == "X" {
-		opp = "O"
-	} else {
-		opp = "X"
+		return g.State.Players.O.Piece
 	}
-	return opp
+	return g.State.Players.X.Piece
 }
 
 // TODO: rethink
@@ -310,9 +278,9 @@ func (g *Game) GameStatus() map[int]bool {
 		legal = g.availableMoves()
 	)
 
-	fmt.Printf("CURRENT TURN: %v, %s\n", curr.Name, g.State.Turn)
+	fmt.Printf("CURRENT TURN: %v, %s\n", curr.Name, curr.Piece)
 	fmt.Printf("SCORE:	O: %d X: %d\n", o, x)
-	fmt.Printf("LEGAL MOVES FOR %s: %v\n", g.State.Turn, legal)
+	fmt.Printf("LEGAL MOVES FOR %s: %v\n", curr.Piece, legal)
 	return legal
 }
 
@@ -399,6 +367,7 @@ func BotGame(bot string) {
 			case "Randy":
 				move = RandyMove(legal)
 			case "Max":
+				// TODO move = MaxMove(g, 3)
 				move = MaxMove(g, 3)
 			}
 			fmt.Printf("%s chose: %d\n", bot, move)
@@ -426,83 +395,76 @@ func displayHelpMsg() {
 	fmt.Println("TODO: PRINT OTHELLO RULES")
 }
 
-// TODO: Test and refactor minimax portion
-func heuristic(g *Game, p Player) int {
-	o, x := 0, 0
-	for i := 11; i < 89; i++ {
-		if g.State.Board[i] == "O" {
-			mappedIndex := mapToStaticWeights(i)
-			o += StaticWeights[mappedIndex]
-		}
-		if g.State.Board[i] == "X" {
-			mappedIndex := mapToStaticWeights(i)
-			x += StaticWeights[mappedIndex]
-		}
-	}
-	if p.Piece == "O" {
-		return o - x
-	}
-	return x - o
-}
-
-func (g *Game) minimax(depth int, isMax bool, p Player) int {
-	if g.GameOver() || depth == 0 {
-		return heuristic(g, p)
-	}
-	legal := g.availableMoves()
-	if len(legal) == 0 {
-		// Pass minimax evaluation turn to opponent
-		return g.minimax(depth-1, !isMax, *g.getOppPlayer(p))
-	}
-	if isMax {
-		maxEval := -1000
-		for move := range legal {
-			gCopy := *g
-			flipStatic(move, gCopy)
-			eval := gCopy.minimax(depth-1, false, *g.getOppPlayer(p))
-			if eval > maxEval {
-				maxEval = eval
-			}
-		}
-		return maxEval
-	} else {
-		minEval := 1000
-		for move := range legal {
-			gCopy := *g
-			flipStatic(move, gCopy)
-			eval := g.minimax(depth-1, true, *g.getOppPlayer(p))
-			if eval < minEval {
-				minEval = eval
-			}
-		}
-		return minEval
-	}
-}
-
-func MaxMove(g *Game, depth int) int {
-	bestMove := -1
-	bestValue := -10000
-	legal := g.availableMoves()
-
-	for move := range legal {
-		gCopy := *g
-		flipStatic(move, gCopy)
-		// Bots are always "O"
-		moveValue := gCopy.minimax(depth, false, *g.State.Players.X)
-		if moveValue > bestValue {
-			bestValue = moveValue
-			bestMove = move
-		}
-	}
-	return bestMove
-}
-
 // Get a pseudorandom move for the Randy bot
 func RandyMove(moves map[int]bool) int {
 	for k := range moves {
 		return k
 	}
 	return 0
+}
+
+func MaxMove(g *Game, depth int) int {
+	bestMove := -1
+	bestScore := math.Inf(-1)
+
+	for move := range g.availableMoves() {
+		gameCopy := copyGame(g)
+		gameCopy.Flip(move)
+
+		// Changed false to true here
+		score := minimax(gameCopy, depth-1, false)
+
+		if score > bestScore {
+			bestScore = score
+			bestMove = move
+		}
+	}
+
+	return bestMove
+}
+
+// minimax is the recursive function that implements the minimax algorithm
+func minimax(g *Game, depth int, maximizingPlayer bool) float64 {
+	if depth == 0 || g.GameOver() {
+		return evaluateBoard(g)
+	}
+
+	if maximizingPlayer {
+		maxEval := math.Inf(-1)
+		for move := range g.availableMoves() {
+			gameCopy := copyGame(g)
+			gameCopy.Flip(move)
+			eval := minimax(gameCopy, depth-1, false)
+			maxEval = math.Max(maxEval, eval)
+		}
+		return maxEval
+	} else {
+		minEval := math.Inf(1)
+		for move := range g.availableMoves() {
+			gameCopy := copyGame(g)
+			gameCopy.Flip(move)
+			eval := minimax(gameCopy, depth-1, true)
+			minEval = math.Min(minEval, eval)
+		}
+		return minEval
+	}
+}
+
+// evaluateBoard assigns a score to the current board state
+func evaluateBoard(g *Game) float64 {
+	o, _ := g.UpdateScore(true)
+	return float64(o)
+}
+
+// copyGame creates a deep copy of the game state
+func copyGame(g *Game) *Game {
+	newBoard := *g.State
+	newBoard.Board = g.State.Board
+	newGame := &Game{
+		State:   &newBoard,
+		History: g.History,
+	}
+	return newGame
 }
 
 // Determines if a square is valid
@@ -521,9 +483,11 @@ var StaticWeights = [...]int{
 	0, 1, -1, 2, -3, -4, -1, -1, -1, -1, -4, -3, 4, -3, 2, 2, 2, 2, -3, 4,
 }
 
+/*
 func mapToStaticWeights(i int) int {
 	row := (i / 10) - 1
 	col := (i % 10) - 1
 	// fmt.Printf("SW mapped to: %d\n", (row*8 + col))
 	return row*8 + col
 }
+*/
