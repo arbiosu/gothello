@@ -1,24 +1,14 @@
 // JS logic
+const newGameBtn = document.getElementById("newGame");
 
 document.getElementById("init").onclick = function(event) {
-    let socket = new WebSocket("ws://localhost:7341/ws");
-    console.log("Attempting WS connection...")
-    let input = document.getElementById("name").value;
+    const socket = new WebSocket("ws://localhost:8081/ws");
+    console.log(document.location.host);
+    const name = document.getElementById("name").value;
     document.getElementById("intro").remove();
 
     socket.onopen = () => {
-        console.log("Successfully Connected to WS");
-        data = {
-            name: input,
-            board: [],
-            move: "", 
-            legal: [], 
-            o: 0,
-            x: 0,
-            gameOver: 0,
-        };
-        
-        socket.send(JSON.stringify(data));
+        console.log("Successfully Connected to WS");    
     };
 
     socket.onclose = (event) => {
@@ -30,47 +20,30 @@ document.getElementById("init").onclick = function(event) {
     };
 
     socket.onmessage = (event) => {
-        const game = JSON.parse(event.data);
-        console.log(game);
-        const board = game["board"];
-        const moves = game["legal"];
-        const o = game["o"]
-        const x = game["x"]
-        const gameOver = game["gameOver"]
-        if (gameOver == 1) {
+        const msg = JSON.parse(event.data);
+        console.log(msg);
+        if (msg.type === "gameState") {
+            displayBoard(msg.content.board)
+            displayScoreBoard(msg.content.o, msg.content.x)
+            if (msg.content.turn === "X") {
+                elems = displayLegalMoves(msg.content.legal)
+                for (let i = 0; i < elems.length; i++) {
+                    elems[i].addEventListener('click', function (e) {
+                        console.log("Selected:", elems[i].id);
+                        socket.send(JSON.stringify({type: "move", content: elems[i].id}));
+                    })
+                }
+            }
+        }
+        if (msg.content.gameOver === true) {
+            console.log("GameOver")
             socket.close()
         }
-        displayScoreBoard(o, x)
-        displayBoard(board);
-        if (moves == null) {
-            let endData = {
-                name: input, 
-                board: board,
-                move: 0,
-                legal: [], 
-                o: 0, 
-                x: 0,
-            };
-            console.log("No moves left for player...");
-            socket.send(JSON.stringify(endData));
-        }
-        elems = displayLegalMoves(moves);
-        for (let i = 0; i < elems.length; i++) {
-            elems[i].addEventListener('click', function (e) {
-                console.log(elems[i].id);
-                let newData = {
-                    name: input, 
-                    board: board,
-                    move: elems[i].id,
-                    legal: [], 
-                    o: 0, 
-                    x: 0,
-                };
-                console.log("Making move...");
-                socket.send(JSON.stringify(newData));
-            })
-        }
+
     };
+    newGameBtn.addEventListener('click', () => {
+        socket.send(JSON.stringify({type: 'newGame'}));
+    });
 }
 
 // Displays the current game state
@@ -104,10 +77,11 @@ function displayScoreBoard(o, x) {
 // legal: the legal moves for the player
 function displayLegalMoves(legal) {
     const elems = [];
-    for (let i = 0; i < legal.length; i++) {
-        let move = document.getElementById(legal[i]);
+    // iterate over the keys of the legal moves map
+    Object.keys(legal).forEach(entry => {
+        let move = document.getElementById(entry);
         move.setAttribute("name", "legal");
         elems.push(move);
-    }
+    });
     return elems
 }
