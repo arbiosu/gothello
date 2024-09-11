@@ -6,6 +6,7 @@ import (
 	"sync"
 
 	"github.com/gorilla/websocket"
+	"github.com/gothello/logic"
 )
 
 var upgrader = websocket.Upgrader{
@@ -34,12 +35,13 @@ func (h *Hub) handleWs(w http.ResponseWriter, r *http.Request) {
 		log.Println(err)
 		return
 	}
-	client := NewClient(conn, h)
+	human := logic.NewPlayer("Human", "X")
+	bot := logic.NewPlayer("Max", "O")
+	client := NewClient(conn, h, logic.NewPlayerList(human, bot))
 
 	h.addClient(client)
 
-	go client.readMessages()
-	go client.writeMessages()
+	go client.playGame()
 
 }
 
@@ -65,9 +67,9 @@ func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 
 	switch origin {
-	case "http://localhost:7342":
+	case "http://localhost:5500":
 		return true
 	default:
-		return false
+		return true
 	}
 }
