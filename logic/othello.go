@@ -178,7 +178,7 @@ func (g *Game) validDirections(square int) []int {
 	return valid
 }
 
-func (g *Game) availableMoves() map[int]bool {
+func (g *Game) AvailableMoves() map[int]bool {
 	moves := make(map[int]bool)
 	for i := 0; i < len(g.State.Board); i++ {
 		if validSquare(i) {
@@ -192,7 +192,7 @@ func (g *Game) availableMoves() map[int]bool {
 }
 
 // Flips the pieces in all valid directions. Records state of the Board.
-// Updates Player Turn.
+// Updates Player Turn. Updates Score.
 func (g *Game) Flip(square int) {
 	opp := g.getOpp()
 	if !validSquare(square) {
@@ -213,18 +213,19 @@ func (g *Game) Flip(square int) {
 	}
 	g.History.moves = append(g.History.moves, *g.State)
 	g.State.Turn = opp
+	_, _ = g.UpdateScore(false)
 }
 
 // Checks if a Game is over
-// TODO: rethink this and availableMoves func because i dont like this
+// TODO: rethink this and AvailableMoves func because i dont like this
 func (g *Game) GameOver() bool {
 	curr := g.getCurrentPlayer().Piece
 	// Change turn to O
 	g.State.Turn = "O"
-	o := g.availableMoves()
+	o := g.AvailableMoves()
 	// Change turn to X
 	g.State.Turn = "X"
-	x := g.availableMoves()
+	x := g.AvailableMoves()
 
 	g.State.Turn = curr
 
@@ -275,7 +276,7 @@ func (g *Game) GameStatus() map[int]bool {
 	var (
 		o, x  = g.UpdateScore(true)
 		curr  = g.getCurrentPlayer()
-		legal = g.availableMoves()
+		legal = g.AvailableMoves()
 	)
 
 	fmt.Printf("CURRENT TURN: %v, %s\n", curr.Name, curr.Piece)
@@ -403,17 +404,16 @@ func RandyMove(moves map[int]bool) int {
 	return 0
 }
 
+// Get a move chosen by the minimax algorithm
 func MaxMove(g *Game, depth int) int {
 	bestMove := -1
 	bestScore := math.Inf(-1)
 
-	for move := range g.availableMoves() {
+	for move := range g.AvailableMoves() {
 		gameCopy := copyGame(g)
 		gameCopy.Flip(move)
 
-		// Changed false to true here
 		score := minimax(gameCopy, depth-1, false)
-
 		if score > bestScore {
 			bestScore = score
 			bestMove = move
@@ -423,7 +423,7 @@ func MaxMove(g *Game, depth int) int {
 	return bestMove
 }
 
-// minimax is the recursive function that implements the minimax algorithm
+// Minimax alogrithm
 func minimax(g *Game, depth int, maximizingPlayer bool) float64 {
 	if depth == 0 || g.GameOver() {
 		return evaluateBoard(g)
@@ -431,7 +431,7 @@ func minimax(g *Game, depth int, maximizingPlayer bool) float64 {
 
 	if maximizingPlayer {
 		maxEval := math.Inf(-1)
-		for move := range g.availableMoves() {
+		for move := range g.AvailableMoves() {
 			gameCopy := copyGame(g)
 			gameCopy.Flip(move)
 			eval := minimax(gameCopy, depth-1, false)
@@ -440,7 +440,7 @@ func minimax(g *Game, depth int, maximizingPlayer bool) float64 {
 		return maxEval
 	} else {
 		minEval := math.Inf(1)
-		for move := range g.availableMoves() {
+		for move := range g.AvailableMoves() {
 			gameCopy := copyGame(g)
 			gameCopy.Flip(move)
 			eval := minimax(gameCopy, depth-1, true)
@@ -450,13 +450,14 @@ func minimax(g *Game, depth int, maximizingPlayer bool) float64 {
 	}
 }
 
-// evaluateBoard assigns a score to the current board state
+// Assigns a score to the current board state
+// TODO: fix
 func evaluateBoard(g *Game) float64 {
 	o, _ := g.UpdateScore(true)
 	return float64(o)
 }
 
-// copyGame creates a deep copy of the game state
+// Creates a deep copy of the game state
 func copyGame(g *Game) *Game {
 	newBoard := *g.State
 	newBoard.Board = g.State.Board
