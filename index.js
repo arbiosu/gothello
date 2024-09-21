@@ -23,6 +23,10 @@ document.getElementById("init").onclick = function(event) {
         const msg = JSON.parse(event.data);
         console.log(msg);
         if (msg.type === "gameState") {
+            if (msg.content.gameOver === true) {
+                console.log("GameOver")
+                socket.close()
+            }
             displayBoard(msg.content.board)
             displayScoreBoard(msg.content.o, msg.content.x)
             if (msg.content.turn === "X") {
@@ -35,11 +39,6 @@ document.getElementById("init").onclick = function(event) {
                 }
             }
         }
-        if (msg.content.gameOver === true) {
-            console.log("GameOver")
-            socket.close()
-        }
-
     };
     newGameBtn.addEventListener('click', () => {
         socket.send(JSON.stringify({type: 'newGame'}));
