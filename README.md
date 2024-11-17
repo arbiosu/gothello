@@ -3,6 +3,6 @@
 ![Test](imgs/gothello.png)
 
 TODO: 
-1. Finish refactor
-2. Add introduction and rules
+1. Fix cli
+2. Test server
 3. Deploy

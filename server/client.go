@@ -2,7 +2,6 @@ package server
 
 import (
 	"log"
-	"strconv"
 	"sync"
 	"time"
 
@@ -52,20 +51,20 @@ func (c *Client) playGame() {
 		switch msg.Type {
 		case "move":
 			move := msg.Content.(string)
-			conv := convertMove(move)
-			// TODO: mutex
-			c.game.Flip(conv)
+
+			c.Lock()
+			defer c.Unlock()
+
+			c.game.MakeOnlineMove(move)
 			c.sendGameState()
-			if c.game.State.Turn == "O" {
-				// Wait for a bit before sending next move
-				// TODO: mutex
-				time.Sleep(1000 * time.Millisecond)
-				aiMove := logic.MaxMove(c.game, 3)
-				c.game.Flip(aiMove)
-				c.sendGameState()
-			}
+
+			// Wait for a bit before sending bot response move
+			time.Sleep(1000 * time.Millisecond)
+			botMove := logic.MaxMove(c.game, 3)
+			c.game.MakeOnlineBotMove(botMove)
+			c.sendGameState()
 		case "newGame":
-			// TODO
+			// TODO FIX
 			c.game = logic.NewGame(logic.NewPlayerList(logic.NewPlayer("Human", "X"), logic.NewPlayer("Max", "O")))
 			c.sendGameState()
 		}
@@ -73,11 +72,7 @@ func (c *Client) playGame() {
 }
 
 func (c *Client) sendGameState() {
-	o, x := c.game.UpdateScore(false)
-	board := c.game.State.Board
-	turn := c.game.State.Turn
-	gameOver := c.game.GameOver()
-	legal := c.game.AvailableMoves()
+	score, gameOver, turn, legal, board := c.game.GameStatus()
 
 	state := Message{
 		Type: "gameState",
@@ -85,8 +80,7 @@ func (c *Client) sendGameState() {
 			"board":    board,
 			"turn":     turn,
 			"legal":    legal,
-			"o":        o,
-			"x":        x,
+			"score":    score,
 			"gameOver": gameOver,
 		},
 	}
@@ -96,13 +90,4 @@ func (c *Client) sendGameState() {
 		log.Printf("Err: %v\n", err)
 		// TODO: handle
 	}
-}
-
-// Convert move string to an int TODO: rethink on js side
-func convertMove(move string) int {
-	i, err := strconv.Atoi(move)
-	if err != nil {
-		log.Println("Error converting move to integer: ", err)
-	}
-	return i
 }

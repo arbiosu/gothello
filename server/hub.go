@@ -63,6 +63,7 @@ func (h *Hub) removeClient(c *Client) {
 	}
 }
 
+// local development
 func checkOrigin(r *http.Request) bool {
 	origin := r.Header.Get("Origin")
 
