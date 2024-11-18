@@ -50,19 +50,19 @@ func (c *Client) playGame() {
 		}
 		switch msg.Type {
 		case "move":
-			move := msg.Content.(string)
-
+			move := msg.Content.(float64)
 			c.Lock()
-			defer c.Unlock()
-
 			c.game.MakeOnlineMove(move)
+			log.Printf("client making move %f", move)
 			c.sendGameState()
-
+			c.Unlock()
 			// Wait for a bit before sending bot response move
 			time.Sleep(1000 * time.Millisecond)
 			botMove := logic.MaxMove(c.game, 3)
+			c.Lock()
 			c.game.MakeOnlineBotMove(botMove)
 			c.sendGameState()
+			c.Unlock()
 		case "newGame":
 			// TODO FIX
 			c.game = logic.NewGame(logic.NewPlayerList(logic.NewPlayer("Human", "X"), logic.NewPlayer("Max", "O")))
@@ -72,7 +72,7 @@ func (c *Client) playGame() {
 }
 
 func (c *Client) sendGameState() {
-	score, gameOver, turn, legal, board := c.game.GameStatus()
+	x, o, gameOver, turn, legal, board := c.game.GameStatus()
 
 	state := Message{
 		Type: "gameState",
@@ -80,12 +80,14 @@ func (c *Client) sendGameState() {
 			"board":    board,
 			"turn":     turn,
 			"legal":    legal,
-			"score":    score,
+			"x":        x,
+			"o":        o,
 			"gameOver": gameOver,
 		},
 	}
-
+	c.Lock()
 	err := c.conn.WriteJSON(state)
+	c.Unlock()
 	if err != nil {
 		log.Printf("Err: %v\n", err)
 		// TODO: handle

@@ -6,15 +6,15 @@ import (
 )
 
 // Used for online play
-func (g *Game) GameStatus() (*score, bool, *Player, map[int]bool, [100]string) {
+func (g *Game) GameStatus() (int, int, bool, string, map[int]bool, [100]string) {
 	gameOver := g.gameOver()
 	legal := g.availableMoves()
-	return g.state.score, gameOver, g.state.currentTurn, legal, g.state.board
+	return g.state.score.x, g.state.score.o, gameOver, g.state.currentTurn.piece, legal, g.state.board
 }
 
-func (g *Game) MakeOnlineMove(move string) {
-	conversion := convertMove(move)
-	g.flip(conversion)
+func (g *Game) MakeOnlineMove(move float64) {
+	conv := int(move)
+	g.flip(conv)
 }
 
 func (g *Game) MakeOnlineBotMove(move int) {

@@ -5,7 +5,7 @@ import (
 	"net/http"
 )
 
-func Server() {
+func Run() {
 	hub := NewHub()
 	mux := http.NewServeMux()
 	mux.HandleFunc("/ws", hub.handleWs)
