@@ -3,6 +3,5 @@
 ![Test](imgs/gothello.png)
 
 TODO: 
-1. Fix cli
-2. Test server
-3. Deploy
+1. Add end-game screen
+2. Deploy

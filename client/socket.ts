@@ -1,4 +1,4 @@
-// websocket stuff
+// Websocket communication format
 export interface Message {
     type: string;
     content: Content
@@ -18,7 +18,10 @@ const socketUrl: string = "ws://localhost:8081/ws"
 
 type EventHandler = (...args: any[]) => void
 
-
+/**
+ * A basic event emitter class
+ * Used to wrap the Websocket client implementation
+ */
 class EventEmitter {
     private events: { [key: string]: EventHandler[] } = {}
 
@@ -50,6 +53,8 @@ class WebSocketClient extends EventEmitter {
         super()
         this.url = url
         this.connect()
+        // Add an event listener to the window to ensure the connection
+        // closes after a user exits the page
         window.addEventListener('beforeunload', this.handleBeforeUnload)
     }
 

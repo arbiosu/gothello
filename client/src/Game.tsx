@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { socket, Content, Message } from "../socket.ts"
 import Board from './Board.tsx'
+import Sidebar from './Sidebar.tsx'
 
 
 export default function Game() {
@@ -40,17 +41,24 @@ export default function Game() {
     }
 
     return (
-        <div>
-            <button onClick={handleNewGame}>New Game</button>
-            {gameState ? (
-                <div>
-                    <p>Current Turn: {gameState.turn}</p>
-                    <p>Score: X - {gameState.x}  O - {gameState.o}</p>
-                    <Board board={gameState.board} legal={gameState.legal} handler={onClickHandler} />
-                </div>
-            ) : (
-                <p>Waiting for gameState...</p>
-            )}
+        <div className='app-container'>
+            <Sidebar />
+            <div className='content'>
+                {gameState ? (
+                    <main>
+                        <p>Current Turn: {gameState.turn}</p>
+                        <p>Score: X - {gameState.x}  O - {gameState.o}</p>
+                        <Board board={gameState.board} legal={gameState.legal} handler={onClickHandler} />
+                        <button onClick={handleNewGame}>New Game</button>
+
+                    </main>
+                ) : (
+                    <main>
+                        <p>Waiting...</p>
+                        <button onClick={handleNewGame}>New Game</button>
+                    </main>
+                )}
+            </div>
         </div>
     )
 }

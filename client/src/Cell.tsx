@@ -16,11 +16,11 @@ export default function Cell({
             <div
                 className="valid-cell"
                 onClick={(event) => handler(index, event)}
-            >{piece}
+            ><strong>{piece}</strong>
             </div>
         )
     }
     return (
-        <div className="cell">{piece}</div>
+        <div className="cell"><strong>{piece}</strong></div>
     )
 }
