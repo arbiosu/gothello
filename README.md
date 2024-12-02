@@ -1,6 +1,6 @@
 ## Gothello
 
-![Test](imgs/gothello.png)
+![Test](imgs/gothello-new.png)
 
 TODO: 
 1. Add end-game screen
