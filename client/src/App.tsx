@@ -1,11 +1,9 @@
-import { useState } from 'react'
 import reactLogo from './assets/react.svg'
 import viteLogo from '/vite.svg'
 import './App.css'
 import Game from './Game'
 
 function App() {
-  const [newGame, setNewGame] = useState<boolean>(false)
 
   return (
     <>
@@ -18,12 +16,7 @@ function App() {
         </a>
       </div>
       <h1>Gothello</h1>
-      <div>
-        <button onClick={() => (setNewGame(!newGame))}>New game</button>
-      </div>
-      {newGame && (
-        <Game isActive={newGame} />
-      )}
+      <Game />
 
     </>
   )

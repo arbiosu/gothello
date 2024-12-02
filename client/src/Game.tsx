@@ -1,68 +1,56 @@
-import { useState, useEffect, useRef } from 'react'
-import Board from './Board'
-
-interface Message {
-    type: string;
-    content: Content
-}
-
-interface Content {
-    board: Array<string>;
-    turn: string;
-    legal: Map<number, boolean>;
-    x: number;
-    o: number;
-    gameOver: boolean
-}
-
-const socketUrl: string = "ws://localhost:8081/ws"
-
-export default function Game({ isActive }: { isActive: boolean }) {
-    const [isConnected, setIsConnected] = useState<boolean>(false)
-    const [board, setBoard] = useState<string[]>([])
-    const [turn, setTurn] = useState<string>('X')
-    const [legalMoves, setLegalMoves] = useState<Map<string, boolean>>(new Map<string, boolean>)
-    const socketRef = useRef<WebSocket | null>(null)
+import { useState, useEffect } from 'react'
+import { socket, Content, Message } from "../socket.ts"
+import Board from './Board.tsx'
 
 
-    // socket event listeners
+export default function Game() {
+    const [newGame, setNewGame] = useState<boolean>(false)
+    const [gameState, setGameState] = useState<Content | null>(null)
+
+    const handleNewGame = () => {
+        setNewGame(!newGame)
+        socket.send({ type: "init" })
+    }
+
     useEffect(() => {
-        socketRef.current = new WebSocket(socketUrl)
-        socketRef.current.onopen = () => setIsConnected(true)
-        socketRef.current.onclose = () => setIsConnected(false)
-        socketRef.current.onmessage = (event: MessageEvent) => {
-            const msg: Message = JSON.parse(event.data)
-            if (msg.type === "gameState") {
-                if (msg.content.gameOver) {
-                    socketRef.current?.close()
-                }
-                // Set the GameData
-                // TODO: bundle this all up?
-                setBoard(() => {
-                    return msg.content.board
-                })
-                setTurn(() => {
-                    return msg.content.turn
-                })
-                setLegalMoves(() => {
-                    const map: Map<string, boolean> = new Map(Object.entries(msg.content.legal))
-                    return map
-                })
-            }
+        const handleMessage = (msg: Message) => {
+            setGameState(msg.content)
+            console.log("set game state")
         }
+
+        const handleClose = () => {
+            console.log('Websocket Connection Closed')
+        }
+
+        socket.on('gameState', handleMessage)
+        socket.on('close', handleClose)
+
         return () => {
-            socketRef.current?.close()
+            socket.off('gameState', handleMessage)
+            socket.off('close', handleClose)
+            //socket.close()
         }
     }, [])
-    // onClick handler
-    const sendMove = (index: number, event: React.MouseEvent<HTMLElement>) => {
-        event.preventDefault()
-        socketRef.current?.send(JSON.stringify({type: "move", content: index}))
+
+
+    const onClickHandler = (index: number, event: React.MouseEvent<HTMLElement>) => {
+        socket.send({ type: "move", content: index })
+        console.log("Send event: ", event)
+        console.log("Sent move: ", index)
     }
 
     return (
-        <>
-            <Board board={board} handler={sendMove} legal={legalMoves} />
-        </>
+        <div>
+            <button onClick={handleNewGame}>New Game</button>
+            {gameState ? (
+                <div>
+                    <p>Current Turn: {gameState.turn}</p>
+                    <p>Score: X - {gameState.x}  O - {gameState.o}</p>
+                    <Board board={gameState.board} legal={gameState.legal} handler={onClickHandler} />
+                </div>
+            ) : (
+                <p>Waiting for gameState...</p>
+            )}
+        </div>
     )
 }
