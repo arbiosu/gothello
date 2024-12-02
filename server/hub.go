@@ -61,6 +61,7 @@ func (h *Hub) removeClient(c *Client) {
 		c.conn.Close()
 		delete(h.clients, c)
 	}
+	log.Println("Client disconnected")
 }
 
 // local development

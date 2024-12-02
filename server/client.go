@@ -38,8 +38,7 @@ func (c *Client) playGame() {
 		c.hub.removeClient(c)
 	}()
 
-	// Send initial game state
-	c.sendGameState()
+	//c.sendGameState()
 
 	for {
 		var msg Message
@@ -49,29 +48,26 @@ func (c *Client) playGame() {
 			break
 		}
 		switch msg.Type {
+		// Send initial game state
+		case "init":
+			c.game = logic.NewGame(logic.NewPlayerList(logic.NewPlayer("Human", "X"), logic.NewPlayer("Max", "O")))
+			c.sendGameState()
 		case "move":
 			move := msg.Content.(float64)
-			c.Lock()
 			c.game.MakeOnlineMove(move)
 			log.Printf("client making move %f", move)
 			c.sendGameState()
-			c.Unlock()
 			// Wait for a bit before sending bot response move
 			time.Sleep(1000 * time.Millisecond)
 			botMove := logic.MaxMove(c.game, 3)
-			c.Lock()
 			c.game.MakeOnlineBotMove(botMove)
-			c.sendGameState()
-			c.Unlock()
-		case "newGame":
-			// TODO FIX
-			c.game = logic.NewGame(logic.NewPlayerList(logic.NewPlayer("Human", "X"), logic.NewPlayer("Max", "O")))
 			c.sendGameState()
 		}
 	}
 }
 
 func (c *Client) sendGameState() {
+	log.Println("Sending game state!")
 	x, o, gameOver, turn, legal, board := c.game.GameStatus()
 
 	state := Message{
